@@ -14,6 +14,8 @@ export type RepairRequestStatus =
 export type AppointmentStatus =
   | "scheduled"
   | "confirmed"
+  | "on_the_way"
+  | "arrived"
   | "in_progress"
   | "completed"
   | "cancelled"
@@ -96,6 +98,8 @@ export type BookingView = {
   payment_status: PaymentStatus | null;
   technician: MatchedTechnician | null;
   alternatives: AlternativeSlot[];
+  /** Offered to technicians, none has accepted yet. */
+  waiting: boolean;
 };
 
 export type AlternativeSlot = { date: string; start: string; end: string };
@@ -123,5 +127,6 @@ export type CustomerBookings = {
     created_at: string;
     requested_date: string | null;
     has_technician: boolean;
+    waiting: boolean;
   }>;
 };
