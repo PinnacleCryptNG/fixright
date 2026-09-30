@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { isValidLga, NIGERIA_STATES } from "./nigeria-locations";
 import type { AdminOverview, AppUser, ServiceRecord, TechnicianCard } from "./types";
 
 /** Public: active service categories. */
@@ -27,7 +28,7 @@ export const listTechnicians = createServerFn({ method: "GET" }).handler(async (
            tp.years_experience,
            tp.verification_status,
            tp.available,
-           coalesce(array_agg(distinct a.area_name) filter (where a.area_name is not null), '{}') as areas,
+           coalesce(array_agg(distinct case when a.covers_entire_state then 'All of ' || a.state else a.lga || ', ' || a.state end) filter (where a.state is not null), '{}') as areas,
            coalesce(array_agg(distinct s.name) filter (where s.name is not null), '{}') as services
     from technician_profiles tp
     join users u on u.id = tp.user_id
@@ -94,7 +95,7 @@ export const adminListTechnicians = createServerFn({ method: "GET" }).handler(as
   return (await sql`
     select tp.id, u.full_name, u.email, u.phone, tp.rating, tp.completed_jobs,
            tp.years_experience, tp.verification_status, tp.available, tp.bio,
-           coalesce(array_agg(distinct a.area_name) filter (where a.area_name is not null), '{}') as areas,
+           coalesce(array_agg(distinct case when a.covers_entire_state then 'All of ' || a.state else a.lga || ', ' || a.state end) filter (where a.state is not null), '{}') as areas,
            coalesce(array_agg(distinct s.name) filter (where s.name is not null), '{}') as services
     from technician_profiles tp
     join users u on u.id = tp.user_id
@@ -154,7 +155,8 @@ const newRequestSchema = z
     brand: z.string().trim().max(80).nullable().optional(),
     model: z.string().trim().max(80).nullable().optional(),
     address: z.string().trim().min(5).max(300),
-    areaName: z.string().trim().min(2).max(80),
+    state: z.string().trim().min(2).max(80),
+    lga: z.string().trim().min(2).max(80),
     landmark: z.string().trim().max(160).nullable().optional(),
     latitude: z.number().min(-90).max(90).nullable().optional(),
     longitude: z.number().min(-180).max(180).nullable().optional(),
@@ -163,6 +165,7 @@ const newRequestSchema = z
     windowEnd: z.string().regex(timeRe),
   })
   .refine((d) => d.windowEnd > d.windowStart, { message: "Window end must be after start" })
+  .refine((d) => isValidLga(d.state, d.lga), { message: "Unknown local government area" })
   .refine((d) => d.date >= new Date(Date.now() + 3600_000).toISOString().slice(0, 10), {
     message: "Date must be today or later",
   });
@@ -172,12 +175,6 @@ async function requireCustomer() {
   const { requireRole } = await import("./users.server");
   return requireRole(await requireIdentity(), ["customer"]);
 }
-
-/** Public: area names currently covered by verified technicians. */
-export const listBookableAreas = createServerFn({ method: "GET" }).handler(async () => {
-  const m = await import("./booking.server");
-  return m.listBookableAreas();
-});
 
 export const submitRepairRequest = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => newRequestSchema.parse(d))
@@ -239,17 +236,21 @@ const profileSchema = z
   .object({
     fullName: z.string().trim().min(2).max(120),
     phone: z.string().trim().regex(/^\+?[0-9 ]{10,16}$/, "Enter a valid phone number"),
-    avatarUrl: z.string().trim().url().max(500).nullable().optional().or(z.literal("").transform(() => null)),
+    avatarUrl: z.string().trim().url().max(500).nullable().optional(),
     bio: z.string().trim().max(600).nullable().optional(),
     yearsExperience: z.number().int().min(0).max(60),
     serviceIds: z.array(z.string().uuid()).min(1).max(20),
-    areas: z.array(z.string().trim().min(2).max(80)).min(1).max(20),
-    radiusKm: z.number().int().min(1).max(50),
+    state: z.string().refine((v) => NIGERIA_STATES.includes(v), "Choose a state"),
+    entireState: z.boolean(),
+    lgas: z.array(z.string()).max(60),
     workStart: z.string().regex(timeRe),
     workEnd: z.string().regex(timeRe),
     available: z.boolean(),
   })
-  .refine((d) => d.workEnd > d.workStart, { message: "Working hours must end after they start" });
+  .refine((d) => d.workEnd > d.workStart, { message: "Working hours must end after they start" })
+  .refine((d) => d.entireState || (d.lgas.length > 0 && d.lgas.every((l) => isValidLga(d.state, l))), {
+    message: "Choose at least one LGA in your state",
+  });
 
 export const saveMyTechProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => profileSchema.parse(d))
@@ -322,18 +323,20 @@ export const adminGetTechnician = createServerFn({ method: "POST" })
     const sql = getSql();
     const rows = (await sql`
       select tp.id, u.full_name, u.email, u.phone, u.avatar_url, tp.bio, tp.years_experience,
-             tp.verification_status, tp.available, tp.service_radius_km, tp.rating, tp.completed_jobs,
+             tp.verification_status, tp.available, tp.rating, tp.completed_jobs,
              to_char(tp.work_start, 'HH24:MI') as work_start, to_char(tp.work_end, 'HH24:MI') as work_end,
              u.created_at,
-             coalesce((select array_agg(a.area_name order by a.area_name) from technician_service_areas a where a.technician_id = tp.id), '{}') as areas,
+             coalesce((select array_agg(a.lga order by a.lga) from technician_service_areas a where a.technician_id = tp.id and not a.covers_entire_state), '{}') as lgas,
+             (select a.state from technician_service_areas a where a.technician_id = tp.id limit 1) as state,
+             coalesce((select bool_or(a.covers_entire_state) from technician_service_areas a where a.technician_id = tp.id), false) as entire_state,
              coalesce((select array_agg(s.name order by s.name) from technician_services ts join services s on s.id = ts.service_id where ts.technician_id = tp.id), '{}') as services
       from technician_profiles tp join users u on u.id = tp.user_id
       where tp.id = ${data.id}
     `) as Array<{
       id: string; full_name: string | null; email: string | null; phone: string | null; avatar_url: string | null;
       bio: string | null; years_experience: number; verification_status: import("./types").VerificationStatus;
-      available: boolean; service_radius_km: number; rating: string; completed_jobs: number;
-      work_start: string; work_end: string; created_at: string; areas: string[]; services: string[];
+      available: boolean; rating: string; completed_jobs: number;
+      work_start: string; work_end: string; created_at: string; state: string | null; entire_state: boolean; lgas: string[]; services: string[];
     }>;
     if (!rows[0]) throw new Error("Technician not found.");
     return rows[0];
