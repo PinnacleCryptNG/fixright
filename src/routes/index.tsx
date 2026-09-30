@@ -41,9 +41,12 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
+  // A dropped network request must never blank the home page: fall back to empty lists.
   loader: async () => ({
-    services: await listServices(),
-    technicians: await listTechnicians(),
+    services: await listServices().catch(() => [] as Awaited<ReturnType<typeof listServices>>),
+    technicians: await listTechnicians().catch(
+      () => [] as Awaited<ReturnType<typeof listTechnicians>>,
+    ),
   }),
   component: Landing,
 });
