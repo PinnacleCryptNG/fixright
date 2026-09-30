@@ -59,3 +59,64 @@ export type AdminOverview = {
   requests: number;
   appointments: number;
 };
+
+export type MatchedTechnician = {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  rating: string;
+  completed_jobs: number;
+  years_experience: number;
+  verification_status: VerificationStatus;
+  available: boolean;
+  services: string[];
+  near_area: string | null;
+};
+
+export type BookingView = {
+  id: string;
+  status: RepairRequestStatus;
+  problem_description: string;
+  device_brand: string | null;
+  device_model: string | null;
+  address: string | null;
+  area_name: string | null;
+  landmark: string | null;
+  requested_date: string | null;
+  availability_start: string | null;
+  availability_end: string | null;
+  proposed_date: string | null;
+  proposed_start: string | null;
+  proposed_end: string | null;
+  service_id: string | null;
+  service_name: string | null;
+  service_fee: string | null;
+  appointment_id: string | null;
+  payment_status: PaymentStatus | null;
+  technician: MatchedTechnician | null;
+};
+
+export type CustomerBookings = {
+  upcoming: Array<{
+    id: string;
+    repair_request_id: string | null;
+    status: AppointmentStatus;
+    payment_status: PaymentStatus;
+    service_fee: string;
+    appointment_date: string;
+    start_time: string | null;
+    end_time: string | null;
+    service_name: string | null;
+    technician_name: string | null;
+    address: string | null;
+    area_name: string | null;
+  }>;
+  requests: Array<{
+    id: string;
+    status: RepairRequestStatus;
+    problem_description: string;
+    service_name: string | null;
+    created_at: string;
+    requested_date: string | null;
+  }>;
+};

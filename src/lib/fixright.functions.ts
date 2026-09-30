@@ -139,3 +139,82 @@ export const adminListServices = createServerFn({ method: "GET" }).handler(async
     from services order by name
   `) as ServiceRecord[];
 });
+
+// ---------------------------------------------------------------------------
+// Customer booking flow
+// ---------------------------------------------------------------------------
+
+const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+
+const newRequestSchema = z
+  .object({
+    serviceId: z.string().uuid(),
+    problemDescription: z.string().trim().min(10).max(2000),
+    brand: z.string().trim().max(80).nullable().optional(),
+    model: z.string().trim().max(80).nullable().optional(),
+    address: z.string().trim().min(5).max(300),
+    areaName: z.string().trim().min(2).max(80),
+    landmark: z.string().trim().max(160).nullable().optional(),
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
+    date: z.string().regex(dateRe),
+    windowStart: z.string().regex(timeRe),
+    windowEnd: z.string().regex(timeRe),
+  })
+  .refine((d) => d.windowEnd > d.windowStart, { message: "Window end must be after start" })
+  .refine((d) => d.date >= new Date(Date.now() + 3600_000).toISOString().slice(0, 10), {
+    message: "Date must be today or later",
+  });
+
+async function requireCustomer() {
+  const { requireIdentity } = await import("./clerk-auth.server");
+  const { requireRole } = await import("./users.server");
+  return requireRole(await requireIdentity(), ["customer"]);
+}
+
+/** Public: area names currently covered by verified technicians. */
+export const listBookableAreas = createServerFn({ method: "GET" }).handler(async () => {
+  const m = await import("./booking.server");
+  return m.listBookableAreas();
+});
+
+export const submitRepairRequest = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => newRequestSchema.parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireCustomer();
+    const m = await import("./booking.server");
+    return m.createRepairRequest(user, data);
+  });
+
+const idSchema = z.object({ requestId: z.string().uuid() });
+
+export const getRepairRequest = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => idSchema.parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireCustomer();
+    const m = await import("./booking.server");
+    return m.getBooking(user, data.requestId);
+  });
+
+export const confirmRepairBooking = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => idSchema.parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireCustomer();
+    const m = await import("./booking.server");
+    return m.confirmBooking(user, data.requestId);
+  });
+
+export const cancelRepairRequest = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => idSchema.parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireCustomer();
+    const m = await import("./booking.server");
+    return m.cancelUnconfirmedRequest(user, data.requestId);
+  });
+
+export const getMyBookings = createServerFn({ method: "GET" }).handler(async () => {
+  const user = await requireCustomer();
+  const m = await import("./booking.server");
+  return m.listCustomerBookings(user);
+});
