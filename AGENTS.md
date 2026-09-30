@@ -25,3 +25,7 @@
 - Requests are offered to every eligible technician via `request_offers`; the first accept wins through a conditional `update ... where status='matching' and matched_technician_id is null`, so duplicate claims are impossible.
 - Demo technicians have no login; `dispatchRequest` auto-accepts for the top-ranked one only when no eligible technician has a Clerk account, keeping the demo usable.
 - Technician logic lives in `src/lib/technician.server.ts`; customer contact details are exposed to a technician only after they accept.
+- Nigerian states and LGAs live only in `src/lib/nigeria-locations.ts` (36 states + FCT, 774 LGAs), used by both UI and server validation, so location data is maintained in one place.
+- Technician coverage is one state, either `covers_entire_state` or specific LGAs in `technician_service_areas`; there is no travel radius or distance matching.
+- Customer location comes from Google Maps (`src/components/location-picker.tsx`), which reverse-geocodes State + LGA; an uncertain LGA is never guessed, and a manual State/LGA fallback is shown only if the map can't load.
+- Technician profile photos upload through Clerk (`user.setProfileImage`), and the resulting URL is stored in `users.avatar_url`; there is no separate image hosting.
