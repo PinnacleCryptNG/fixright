@@ -1,5 +1,5 @@
 import { getSql } from "./db.server";
-import { findMatch, isSlotStillFree } from "./matching.server";
+import { findAlternatives, findMatch, isSlotStillFree } from "./matching.server";
 import type { AppUser, BookingView, CustomerBookings, MatchedTechnician } from "./types";
 
 export type NewRequestInput = {
@@ -65,7 +65,17 @@ async function loadBooking(requestId: string, customerId: string): Promise<Booki
   const technician = matched_technician_id
     ? await getPublicTechnician(matched_technician_id, row.area_name ?? "")
     : null;
-  return { ...rest, technician };
+  const alternatives =
+    !technician && rest.status === "matching" && rest.service_id && rest.requested_date
+      ? await findAlternatives({
+          serviceId: rest.service_id,
+          areaName: rest.area_name ?? "",
+          date: rest.requested_date,
+          windowStart: rest.availability_start ?? "08:00",
+          windowEnd: rest.availability_end ?? "18:00",
+        })
+      : [];
+  return { ...rest, technician, alternatives };
 }
 
 async function runMatching(requestId: string, customerId: string, exclude: string[] = []) {
@@ -120,7 +130,11 @@ export async function getBooking(user: AppUser, requestId: string) {
   return loadBooking(requestId, user.id);
 }
 
-/** Creates the appointment only after the customer confirms the matched technician. */
+/**
+ * Demo payment + confirmation. Only reachable after a technician was matched
+ * (status technician_pending). Payment is simulated: it is recorded as paid and
+ * the appointment is created confirmed in the same step — never before.
+ */
 export async function confirmBooking(user: AppUser, requestId: string): Promise<BookingView> {
   const sql = getSql();
   const rows = (await sql`
@@ -150,7 +164,7 @@ export async function confirmBooking(user: AppUser, requestId: string): Promise<
     insert into appointments (repair_request_id, customer_id, technician_id, service_id,
       appointment_date, start_time, end_time, status, payment_status, service_fee)
     values (${requestId}, ${user.id}, ${r.matched_technician_id}, ${r.service_id},
-      ${r.d}, ${r.s}, ${r.e}, 'scheduled', 'pending', ${r.fee ?? 1000})
+      ${r.d}, ${r.s}, ${r.e}, 'confirmed', 'paid', ${r.fee ?? 1000})
   `;
   await sql`update repair_requests set status = 'confirmed', updated_at = now() where id = ${requestId}`;
   return loadBooking(requestId, user.id);
@@ -180,13 +194,14 @@ export async function listCustomerBookings(user: AppUser): Promise<CustomerBooki
     left join services s on s.id = ap.service_id
     left join repair_requests r on r.id = ap.repair_request_id
     where ap.customer_id = ${user.id}
-      and ap.status in ('scheduled', 'in_progress')
+      and ap.status in ('scheduled', 'confirmed', 'in_progress')
       and ap.appointment_date >= current_date
     order by ap.appointment_date, ap.start_time
   `) as CustomerBookings["upcoming"];
   const requests = (await sql`
     select r.id, r.status, r.problem_description, s.name as service_name, r.created_at,
-           to_char(r.requested_date, 'YYYY-MM-DD') as requested_date
+           to_char(r.requested_date, 'YYYY-MM-DD') as requested_date,
+           (r.matched_technician_id is not null) as has_technician
     from repair_requests r left join services s on s.id = r.service_id
     where r.customer_id = ${user.id}
     order by r.created_at desc limit 10

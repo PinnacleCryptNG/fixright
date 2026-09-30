@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, type ReactNode } from "react";
-import { ArrowLeft, BadgeCheck, CalendarDays, Check, MapPin, Star, Wrench } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarDays, Check, CreditCard, MapPin, Star, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,8 @@ import {
   submitRepairRequest,
 } from "@/lib/fixright.functions";
 import { formatNaira, formatSlot, formatTime, todayLocalISO } from "@/lib/format";
-import type { BookingView, ServiceRecord } from "@/lib/types";
+import { SERVICE_FEE_NOTE } from "@/lib/config";
+import type { AlternativeSlot, BookingView, ServiceRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/book")({
@@ -68,7 +69,7 @@ const emptyDraft: Draft = {
 };
 
 const STEPS = ["Service", "Problem", "Location", "Availability", "Review"];
-type Phase = "form" | "matching" | "matched" | "none" | "booked";
+type Phase = "form" | "matching" | "matched" | "payment" | "none" | "booked";
 
 function BookPage() {
   const { role, isPending } = useAppUser();
@@ -95,24 +96,25 @@ function BookPage() {
     );
   }
 
-  async function handleSubmit() {
-    if (!draft.service) return;
+  async function handleSubmit(override?: Partial<Draft>) {
+    const d = { ...draft, ...override };
+    if (!d.service) return;
     setBusy(true);
     setPhase("matching");
     const started = Date.now();
     try {
       const result = await submit({
         data: {
-          serviceId: draft.service.id,
-          problemDescription: draft.problem,
-          brand: draft.brand || null,
-          model: draft.model || null,
-          address: draft.address,
-          areaName: draft.area,
-          landmark: draft.landmark || null,
-          date: draft.date,
-          windowStart: draft.windowStart,
-          windowEnd: draft.windowEnd,
+          serviceId: d.service.id,
+          problemDescription: d.problem,
+          brand: d.brand || null,
+          model: d.model || null,
+          address: d.address,
+          areaName: d.area,
+          landmark: d.landmark || null,
+          date: d.date,
+          windowStart: d.windowStart,
+          windowEnd: d.windowEnd,
         },
       });
       const wait = Math.max(0, 2200 - (Date.now() - started));
@@ -141,32 +143,45 @@ function BookPage() {
     }
   }
 
-  async function handleChange() {
+  async function discardUnconfirmed() {
     if (booking && booking.status !== "confirmed") {
       await cancel({ data: { requestId: booking.id } }).catch(() => undefined);
     }
     setBooking(null);
+  }
+
+  async function handleChange(toStep = 4) {
+    await discardUnconfirmed();
     setPhase("form");
-    setStep(4);
+    setStep(toStep);
+  }
+
+  async function handleAlternative(alt: AlternativeSlot) {
+    await discardUnconfirmed();
+    const patch = { date: alt.date, windowStart: alt.start, windowEnd: alt.end, custom: true };
+    update(patch);
+    await handleSubmit(patch);
   }
 
   if (phase === "matching") return <Frame><Matching /></Frame>;
   if (phase === "matched" && booking) {
     return (
       <Frame>
-        <MatchedView booking={booking} busy={busy} onConfirm={handleConfirm} onChange={handleChange} />
+        <MatchedView booking={booking} busy={busy} onConfirm={() => setPhase("payment")} onChange={() => handleChange()} />
+      </Frame>
+    );
+  }
+  if (phase === "payment" && booking && booking.technician) {
+    return (
+      <Frame>
+        <PaymentView booking={booking} busy={busy} onPay={handleConfirm} onBack={() => setPhase("matched")} />
       </Frame>
     );
   }
   if (phase === "none" && booking) {
     return (
       <Frame>
-        <h1 className="text-2xl sm:text-3xl">No technician available yet</h1>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          We couldn't find a verified technician for {booking.service_name} in {booking.area_name} during your
-          window. Try another date or a wider availability window.
-        </p>
-        <Button className="mt-6" onClick={handleChange}>Change Request</Button>
+        <NoMatchView booking={booking} busy={busy} onAlternative={handleAlternative} onChange={handleChange} />
       </Frame>
     );
   }
@@ -197,7 +212,7 @@ function BookPage() {
         {step === 1 && <StepProblem draft={draft} update={update} onNext={() => setStep(2)} />}
         {step === 2 && <StepLocation draft={draft} update={update} onNext={() => setStep(3)} />}
         {step === 3 && <StepAvailability draft={draft} update={update} onNext={() => setStep(4)} />}
-        {step === 4 && <StepReview draft={draft} onEdit={setStep} busy={busy} onSubmit={handleSubmit} />}
+        {step === 4 && <StepReview draft={draft} onEdit={setStep} busy={busy} onSubmit={() => handleSubmit()} />}
       </div>
     </Frame>
   );
@@ -609,8 +624,9 @@ function MatchedView({ booking, busy, onConfirm, onChange }: { booking: BookingV
         </p>
         <p className="mt-2 text-sm text-muted-foreground">This time fits within your requested availability window.</p>
       </div>
+      <FeeBox fee={booking.service_fee} />
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <Button size="lg" disabled={busy} onClick={onConfirm}>Confirm Booking</Button>
+        <Button size="lg" disabled={busy} onClick={onConfirm}>Confirm &amp; Pay {formatNaira(booking.service_fee)}</Button>
         <Button size="lg" variant="outline" disabled={busy} onClick={onChange}>Change Request</Button>
       </div>
     </div>
@@ -632,16 +648,105 @@ function BookedView({ booking }: { booking: BookingView }) {
         </ReviewRow>
         <ReviewRow label="Location">{booking.address}, {booking.area_name}</ReviewRow>
         <ReviewRow label="Service call">{formatNaira(booking.service_fee)}</ReviewRow>
-        <ReviewRow label="Payment status">
+        <ReviewRow label="Payment">
           <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium">
-            Payment pending · demo
+            {booking.payment_status === "paid" ? "Paid · Demo" : "Not paid"}
           </span>
-          <span className="mt-1 block text-xs text-muted-foreground">No payment has been taken. Online payment arrives later.</span>
+          <span className="mt-1 block text-xs text-muted-foreground">Demo payment — no real money was charged.</span>
         </ReviewRow>
       </dl>
-      <Button asChild size="lg" className="mt-6 w-full">
-        <Link to="/dashboard">View Appointment</Link>
-      </Button>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <Button asChild size="lg"><Link to="/dashboard">View Appointment</Link></Button>
+        <Button asChild size="lg" variant="outline"><Link to="/dashboard">Back to dashboard</Link></Button>
+      </div>
+    </div>
+  );
+}
+
+function FeeBox({ fee }: { fee: string | null }) {
+  return (
+    <div className="mt-4 rounded-lg border border-border bg-card p-5">
+      <div className="flex items-baseline justify-between">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Service call</p>
+        <p className="text-xl font-semibold">{formatNaira(fee)}</p>
+      </div>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+        The service-call fee covers the technician's visit and diagnosis. Repair labor and replacement parts are separate.
+      </p>
+    </div>
+  );
+}
+
+function PaymentView({ booking, busy, onPay, onBack }: { booking: BookingView; busy: boolean; onPay: () => void; onBack: () => void }) {
+  return (
+    <div className="rise-in">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-primary/50 px-2.5 py-0.5 text-xs font-medium text-primary">
+        <CreditCard className="h-3.5 w-3.5" /> Demo payment
+      </span>
+      <h1 className="mt-4 text-3xl sm:text-4xl">Pay to confirm</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        This is a simulated payment for the demo. No card is needed and no real money is charged.
+      </p>
+      <dl className="mt-6 divide-y divide-border rounded-lg border border-border bg-card shadow-card">
+        <ReviewRow label="Technician">{booking.technician?.full_name}</ReviewRow>
+        <ReviewRow label="Appointment">{formatSlot(booking.proposed_date, booking.proposed_start, booking.proposed_end)}</ReviewRow>
+        <ReviewRow label="Amount"><span className="text-lg font-semibold">{formatNaira(booking.service_fee)}</span></ReviewRow>
+      </dl>
+      <p className="mt-3 text-xs text-muted-foreground">{SERVICE_FEE_NOTE}</p>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <Button size="lg" disabled={busy} onClick={onPay}>{busy ? "Processing…" : `Pay ${formatNaira(booking.service_fee)}`}</Button>
+        <Button size="lg" variant="outline" disabled={busy} onClick={onBack}>Back</Button>
+      </div>
+    </div>
+  );
+}
+
+function NoMatchView({
+  booking, busy, onAlternative, onChange,
+}: {
+  booking: BookingView;
+  busy: boolean;
+  onAlternative: (a: AlternativeSlot) => void;
+  onChange: (step: number) => void;
+}) {
+  return (
+    <div className="rise-in">
+      <h1 className="text-2xl sm:text-3xl">We couldn't find a technician yet</h1>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+        There isn't an available technician covering your area for this service and time right now. You have not been charged.
+      </p>
+      <dl className="mt-6 divide-y divide-border rounded-lg border border-border bg-card">
+        <ReviewRow label="Service">{booking.service_name}</ReviewRow>
+        <ReviewRow label="Area">{booking.area_name}</ReviewRow>
+        <ReviewRow label="Requested date">{formatSlot(booking.requested_date, null, null)}</ReviewRow>
+        <ReviewRow label="Availability window">
+          {formatTime(booking.availability_start ?? "")} – {formatTime(booking.availability_end ?? "")}
+        </ReviewRow>
+      </dl>
+      {booking.alternatives.length ? (
+        <div className="mt-6">
+          <p className="text-sm font-semibold">Technicians are free at these times</p>
+          <div className="mt-3 grid gap-2">
+            {booking.alternatives.map((a) => (
+              <button
+                key={`${a.date}-${a.start}`}
+                type="button"
+                disabled={busy}
+                onClick={() => onAlternative(a)}
+                className="flex items-center justify-between rounded-lg border border-border bg-card p-4 text-left text-sm transition-colors hover:border-primary disabled:opacity-50"
+              >
+                <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary" />{formatSlot(a.date, a.start, a.end)}</span>
+                <span className="text-xs font-medium text-primary">Use this time</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <Button variant="outline" disabled={busy} onClick={() => onChange(3)}>Try another time</Button>
+        <Button variant="outline" disabled={busy} onClick={() => onChange(2)}>Change location</Button>
+        <Button variant="outline" disabled={busy} onClick={() => onChange(0)}>Change service</Button>
+      </div>
     </div>
   );
 }

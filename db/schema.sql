@@ -131,3 +131,6 @@ alter table repair_requests add column if not exists proposed_start time;
 alter table repair_requests add column if not exists proposed_end time;
 create index if not exists idx_requests_customer on repair_requests(customer_id, created_at desc);
 create index if not exists idx_appointments_tech_date on appointments(technician_id, appointment_date);
+
+-- Booking v2: appointments are created already confirmed after demo payment.
+alter type appointment_status add value if not exists 'confirmed';
