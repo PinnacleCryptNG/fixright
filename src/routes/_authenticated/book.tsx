@@ -212,7 +212,7 @@ function BookPage() {
         {step === 1 && <StepProblem draft={draft} update={update} onNext={() => setStep(2)} />}
         {step === 2 && <StepLocation draft={draft} update={update} onNext={() => setStep(3)} />}
         {step === 3 && <StepAvailability draft={draft} update={update} onNext={() => setStep(4)} />}
-        {step === 4 && <StepReview draft={draft} onEdit={setStep} busy={busy} onSubmit={handleSubmit} />}
+        {step === 4 && <StepReview draft={draft} onEdit={setStep} busy={busy} onSubmit={() => handleSubmit()} />}
       </div>
     </Frame>
   );
