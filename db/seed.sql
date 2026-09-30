@@ -19,8 +19,8 @@ insert into users (email, full_name, phone, role) values
 on conflict (email) do nothing;
 
 insert into technician_profiles
-  (user_id, bio, years_experience, verification_status, rating, completed_jobs, latitude, longitude, service_radius_km, available)
-select u.id, v.bio, v.years, 'verified'::verification_status, v.rating, v.jobs, v.lat, v.lng, 12, true
+  (user_id, bio, years_experience, verification_status, rating, completed_jobs, latitude, longitude, available)
+select u.id, v.bio, v.years, 'verified'::verification_status, v.rating, v.jobs, v.lat, v.lng, true
 from (values
   ('musa.ibrahim@demo.fixright.ng', 'AC & refrigeration technician serving Narayi and nearby areas.', 9, 4.8, 126, 10.4649, 7.4360),
   ('ibrahim.sule@demo.fixright.ng', 'Appliance & generator technician based in Barnawa.', 7, 4.7, 94, 10.4808, 7.4231),
@@ -29,18 +29,6 @@ from (values
 join users u on u.email = v.email
 on conflict (user_id) do nothing;
 
-insert into technician_service_areas (technician_id, area_name, latitude, longitude, radius_km)
-select tp.id, v.area, v.lat, v.lng, 12
-from (values
-  ('musa.ibrahim@demo.fixright.ng', 'Narayi', 10.4649, 7.4360),
-  ('ibrahim.sule@demo.fixright.ng', 'Barnawa', 10.4808, 7.4231),
-  ('yusuf.ahmed@demo.fixright.ng', 'Kakuri', 10.4756, 7.4096)
-) as v(email, area, lat, lng)
-join users u on u.email = v.email
-join technician_profiles tp on tp.user_id = u.id
-where not exists (
-  select 1 from technician_service_areas a where a.technician_id = tp.id and a.area_name = v.area
-);
 
 insert into technician_services (technician_id, service_id)
 select tp.id, s.id
@@ -59,19 +47,17 @@ join technician_profiles tp on tp.user_id = u.id
 join services s on s.name = v.service
 on conflict (technician_id, service_id) do nothing;
 
--- Neighbouring areas each demo technician also covers (fictional coverage).
-insert into technician_service_areas (technician_id, area_name, latitude, longitude, radius_km)
-select tp.id, v.area, v.lat, v.lng, 8
+
+-- Demo coverage in the State -> LGA model (Narayi/Barnawa/Sabon Tasha are in Chikun; Kakuri in Kaduna South).
+insert into technician_service_areas (technician_id, state, lga, covers_entire_state)
+select tp.id, 'Kaduna', v.lga, false
 from (values
-  ('musa.ibrahim@demo.fixright.ng', 'Sabon Tasha', 10.4420, 7.4630),
-  ('musa.ibrahim@demo.fixright.ng', 'Barnawa', 10.4808, 7.4231),
-  ('ibrahim.sule@demo.fixright.ng', 'Narayi', 10.4649, 7.4360),
-  ('ibrahim.sule@demo.fixright.ng', 'Kakuri', 10.4756, 7.4096),
-  ('yusuf.ahmed@demo.fixright.ng', 'Barnawa', 10.4808, 7.4231),
-  ('yusuf.ahmed@demo.fixright.ng', 'Narayi', 10.4649, 7.4360)
-) as v(email, area, lat, lng)
+  ('musa.ibrahim@demo.fixright.ng', 'Chikun'),
+  ('ibrahim.sule@demo.fixright.ng', 'Chikun'),
+  ('ibrahim.sule@demo.fixright.ng', 'Kaduna South'),
+  ('yusuf.ahmed@demo.fixright.ng', 'Kaduna South'),
+  ('yusuf.ahmed@demo.fixright.ng', 'Chikun')
+) as v(email, lga)
 join users u on u.email = v.email
 join technician_profiles tp on tp.user_id = u.id
-where not exists (
-  select 1 from technician_service_areas a where a.technician_id = tp.id and a.area_name = v.area
-);
+on conflict do nothing;
