@@ -364,3 +364,8 @@ export const adminSetVerification = createServerFn({ method: "POST" })
     }
     return { ok: true, status: data.status };
   });
+
+/** Public: browser Google Maps key (restricted by site in Google Cloud). Null when not configured. */
+export const getMapsConfig = createServerFn({ method: "GET" }).handler(async () => {
+  return { key: process.env["GOOGLE_MAPS_API_KEY"] ?? null };
+});
