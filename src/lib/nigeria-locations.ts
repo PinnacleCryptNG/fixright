@@ -58,11 +58,16 @@ export function matchState(raw: string | null | undefined): string | null {
   return NIGERIA_STATES.find((s) => norm(s) === n) ?? null;
 }
 
+/** Known exact aliases used by map providers (e.g. Mapbox "Abuja Municipal"). */
+const LGA_ALIASES: Record<string, Record<string, string>> = {
+  "Federal Capital Territory": { abujamunicipal: "Municipal", abujamunicipalareacouncil: "Municipal", municipalareacouncil: "Municipal", amac: "Municipal" },
+};
+
 /** Maps a free-form LGA name to a canonical LGA of the given state, or null (never guesses). */
 export function matchLga(state: string, raw: string | null | undefined): string | null {
   if (!raw) return null;
   const n = norm(raw);
-  return lgasForState(state).find((l) => norm(l) === n) ?? null;
+  return lgasForState(state).find((l) => norm(l) === n) ?? LGA_ALIASES[state]?.[n] ?? null;
 }
 
 export function isValidLga(state: string, lga: string) {
