@@ -201,3 +201,6 @@ update repair_requests set state = 'Kaduna',
              when area_name in ('Kawo','Malali','Ungwan Rimi','Ungwan Dosa') then 'Kaduna North'
              else 'Chikun' end
   where state is null and area_name is not null;
+
+-- Homepage showcase label (display only, e.g. "Gwarinpa, Abuja"); matching uses technician_service_areas.
+alter table technician_profiles add column if not exists showcase_area text;

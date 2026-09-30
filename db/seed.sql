@@ -11,53 +11,69 @@ insert into services (name, description, category, base_service_fee) values
   ('Other', 'Something else that needs fixing? Describe it and we will match you.', 'General', 1000)
 on conflict (name) do nothing;
 
+-- Retired demo technicians (replaced by the multi-city set below).
+delete from users where email in ('musa.ibrahim@demo.fixright.ng','ibrahim.sule@demo.fixright.ng','yusuf.ahmed@demo.fixright.ng')
+  and not exists (select 1 from technician_profiles tp join appointments a on a.technician_id = tp.id where tp.user_id = users.id);
+
 -- Demo technicians (fictional accounts, no Clerk identity attached)
 insert into users (email, full_name, phone, role) values
-  ('musa.ibrahim@demo.fixright.ng', 'Musa Ibrahim', '+234 800 000 0001', 'technician'),
-  ('ibrahim.sule@demo.fixright.ng', 'Ibrahim Sule', '+234 800 000 0002', 'technician'),
-  ('yusuf.ahmed@demo.fixright.ng', 'Yusuf Ahmed', '+234 800 000 0003', 'technician')
+  ('zainab.musa@demo.fixright.ng', 'Zainab Musa', '+234 800 000 0011', 'technician'),
+  ('bashir.danjuma@demo.fixright.ng', 'Bashir Danjuma', '+234 800 000 0012', 'technician'),
+  ('aisha.suleiman@demo.fixright.ng', 'Aisha Suleiman', '+234 800 000 0013', 'technician'),
+  ('chinedu.okafor@demo.fixright.ng', 'Chinedu Okafor', '+234 800 000 0014', 'technician'),
+  ('tobi.adeyemi@demo.fixright.ng', 'Tobi Adeyemi', '+234 800 000 0015', 'technician'),
+  ('ifeoma.nwosu@demo.fixright.ng', 'Ifeoma Nwosu', '+234 800 000 0016', 'technician')
 on conflict (email) do nothing;
 
 insert into technician_profiles
-  (user_id, bio, years_experience, verification_status, rating, completed_jobs, latitude, longitude, available)
-select u.id, v.bio, v.years, 'verified'::verification_status, v.rating, v.jobs, v.lat, v.lng, true
+  (user_id, bio, years_experience, verification_status, rating, completed_jobs, available, showcase_area)
+select u.id, v.bio, v.years, 'verified'::verification_status, v.rating, v.jobs, true, v.area
 from (values
-  ('musa.ibrahim@demo.fixright.ng', 'AC & refrigeration technician serving Narayi and nearby areas.', 9, 4.8, 126, 10.4649, 7.4360),
-  ('ibrahim.sule@demo.fixright.ng', 'Appliance & generator technician based in Barnawa.', 7, 4.7, 94, 10.4808, 7.4231),
-  ('yusuf.ahmed@demo.fixright.ng', 'Electronics technician handling TVs, laptops and phones in Kakuri.', 11, 4.9, 181, 10.4756, 7.4096)
-) as v(email, bio, years, rating, jobs, lat, lng)
+  ('zainab.musa@demo.fixright.ng', 'AC & refrigeration technician.', 9, 4.9, 138, 'Chikun, Kaduna'),
+  ('bashir.danjuma@demo.fixright.ng', 'Generator & washing machine technician.', 8, 4.8, 112, 'Kaduna South, Kaduna'),
+  ('aisha.suleiman@demo.fixright.ng', 'AC & generator technician.', 10, 4.9, 156, 'Municipal Area Council, Abuja'),
+  ('chinedu.okafor@demo.fixright.ng', 'Electronics technician: laptops, phones and TVs.', 7, 4.7, 97, 'Gwarinpa, Abuja'),
+  ('tobi.adeyemi@demo.fixright.ng', 'Appliance & cooling technician.', 9, 4.8, 143, 'Ikeja, Lagos'),
+  ('ifeoma.nwosu@demo.fixright.ng', 'Electronics technician: laptops, phones and TVs.', 11, 4.9, 174, 'Yaba, Lagos')
+) as v(email, bio, years, rating, jobs, area)
 join users u on u.email = v.email
-on conflict (user_id) do nothing;
-
+on conflict (user_id) do update set showcase_area = excluded.showcase_area;
 
 insert into technician_services (technician_id, service_id)
 select tp.id, s.id
 from (values
-  ('musa.ibrahim@demo.fixright.ng', 'Air Conditioner'),
-  ('musa.ibrahim@demo.fixright.ng', 'Refrigerator'),
-  ('ibrahim.sule@demo.fixright.ng', 'Air Conditioner'),
-  ('ibrahim.sule@demo.fixright.ng', 'Generator'),
-  ('ibrahim.sule@demo.fixright.ng', 'Washing Machine'),
-  ('yusuf.ahmed@demo.fixright.ng', 'Television'),
-  ('yusuf.ahmed@demo.fixright.ng', 'Laptop'),
-  ('yusuf.ahmed@demo.fixright.ng', 'Phone')
+  ('zainab.musa@demo.fixright.ng', 'Air Conditioner'),
+  ('zainab.musa@demo.fixright.ng', 'Refrigerator'),
+  ('bashir.danjuma@demo.fixright.ng', 'Generator'),
+  ('bashir.danjuma@demo.fixright.ng', 'Washing Machine'),
+  ('aisha.suleiman@demo.fixright.ng', 'Air Conditioner'),
+  ('aisha.suleiman@demo.fixright.ng', 'Generator'),
+  ('chinedu.okafor@demo.fixright.ng', 'Laptop'),
+  ('chinedu.okafor@demo.fixright.ng', 'Phone'),
+  ('chinedu.okafor@demo.fixright.ng', 'Television'),
+  ('tobi.adeyemi@demo.fixright.ng', 'Refrigerator'),
+  ('tobi.adeyemi@demo.fixright.ng', 'Washing Machine'),
+  ('tobi.adeyemi@demo.fixright.ng', 'Air Conditioner'),
+  ('ifeoma.nwosu@demo.fixright.ng', 'Laptop'),
+  ('ifeoma.nwosu@demo.fixright.ng', 'Phone'),
+  ('ifeoma.nwosu@demo.fixright.ng', 'Television')
 ) as v(email, service)
 join users u on u.email = v.email
 join technician_profiles tp on tp.user_id = u.id
 join services s on s.name = v.service
 on conflict (technician_id, service_id) do nothing;
 
-
--- Demo coverage in the State -> LGA model (Narayi/Barnawa/Sabon Tasha are in Chikun; Kakuri in Kaduna South).
+-- Coverage matches the displayed location (Gwarinpa is in Municipal; Yaba is in Lagos Mainland).
 insert into technician_service_areas (technician_id, state, lga, covers_entire_state)
-select tp.id, 'Kaduna', v.lga, false
+select tp.id, v.state, v.lga, false
 from (values
-  ('musa.ibrahim@demo.fixright.ng', 'Chikun'),
-  ('ibrahim.sule@demo.fixright.ng', 'Chikun'),
-  ('ibrahim.sule@demo.fixright.ng', 'Kaduna South'),
-  ('yusuf.ahmed@demo.fixright.ng', 'Kaduna South'),
-  ('yusuf.ahmed@demo.fixright.ng', 'Chikun')
-) as v(email, lga)
+  ('zainab.musa@demo.fixright.ng', 'Kaduna', 'Chikun'),
+  ('bashir.danjuma@demo.fixright.ng', 'Kaduna', 'Kaduna South'),
+  ('aisha.suleiman@demo.fixright.ng', 'Federal Capital Territory', 'Municipal'),
+  ('chinedu.okafor@demo.fixright.ng', 'Federal Capital Territory', 'Municipal'),
+  ('tobi.adeyemi@demo.fixright.ng', 'Lagos', 'Ikeja'),
+  ('ifeoma.nwosu@demo.fixright.ng', 'Lagos', 'Lagos Mainland')
+) as v(email, state, lga)
 join users u on u.email = v.email
 join technician_profiles tp on tp.user_id = u.id
 on conflict do nothing;
