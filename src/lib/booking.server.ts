@@ -5,13 +5,13 @@ import type { AppUser, BookingView, CustomerBookings, MatchedTechnician } from "
 export type NewRequestInput = {
   serviceId: string;
   problemDescription: string;
-  brand?: string | null;
-  model?: string | null;
+  brand?: string | null | undefined;
+  model?: string | null | undefined;
   address: string;
   areaName: string;
-  landmark?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
+  landmark?: string | null | undefined;
+  latitude?: number | null | undefined;
+  longitude?: number | null | undefined;
   date: string;
   windowStart: string;
   windowEnd: string;
