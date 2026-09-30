@@ -172,12 +172,17 @@ alter table technician_service_areas add column if not exists lga text;
 alter table technician_service_areas add column if not exists covers_entire_state boolean not null default false;
 alter table technician_service_areas add column if not exists created_at timestamptz not null default now();
 alter table technician_service_areas add column if not exists updated_at timestamptz not null default now();
--- Convert legacy Kaduna neighbourhood rows to their LGA.
-update technician_service_areas set state = 'Kaduna',
-  lga = case when area_name in ('Kakuri','Television','Tudun Wada','Kabala Costain') then 'Kaduna South'
-             when area_name in ('Kawo','Malali','Ungwan Rimi','Ungwan Dosa') then 'Kaduna North'
-             else 'Chikun' end
-  where state is null and area_name is not null;
+-- Convert legacy Kaduna neighbourhood rows to their LGA (only while the old column exists).
+do $$ begin
+  if exists (select 1 from information_schema.columns
+             where table_name = 'technician_service_areas' and column_name = 'area_name') then
+    execute $q$update technician_service_areas set state = 'Kaduna',
+      lga = case when area_name in ('Kakuri','Television','Tudun Wada','Kabala Costain') then 'Kaduna South'
+                 when area_name in ('Kawo','Malali','Ungwan Rimi','Ungwan Dosa') then 'Kaduna North'
+                 else 'Chikun' end
+      where state is null and area_name is not null$q$;
+  end if;
+end $$;
 delete from technician_service_areas a using technician_service_areas b
   where a.ctid > b.ctid and a.technician_id = b.technician_id and a.state = b.state and a.lga is not distinct from b.lga;
 alter table technician_service_areas alter column state set not null;
