@@ -19,25 +19,26 @@ export const listServices = createServerFn({ method: "GET" }).handler(async () =
 export const listTechnicians = createServerFn({ method: "GET" }).handler(async () => {
   const { getSql } = await import("./db.server");
   const sql = getSql();
+  // Homepage showcase: the top demo-labelled technician per state (max 3), not a directory.
   return (await sql`
-    select tp.id,
-           u.full_name,
-           tp.bio,
-           tp.rating,
-           tp.completed_jobs,
-           tp.years_experience,
-           tp.verification_status,
-           tp.available,
-           coalesce(array_agg(distinct case when a.covers_entire_state then 'All of ' || a.state else a.lga || ', ' || a.state end) filter (where a.state is not null), '{}') as areas,
-           coalesce(array_agg(distinct s.name) filter (where s.name is not null), '{}') as services
-    from technician_profiles tp
-    join users u on u.id = tp.user_id
-    left join technician_service_areas a on a.technician_id = tp.id
-    left join technician_services ts on ts.technician_id = tp.id
-    left join services s on s.id = ts.service_id
-    where tp.verification_status = 'verified'
-    group by tp.id, u.full_name
-    order by tp.completed_jobs desc
+    select * from (
+      select distinct on (a0.state) tp.id,
+             u.full_name,
+             tp.bio,
+             tp.rating,
+             tp.completed_jobs,
+             tp.years_experience,
+             tp.verification_status,
+             tp.available,
+             array[tp.showcase_area] as areas,
+             coalesce((select array_agg(s.name order by s.name) from technician_services ts
+                       join services s on s.id = ts.service_id where ts.technician_id = tp.id), '{}') as services
+      from technician_profiles tp
+      join users u on u.id = tp.user_id
+      join lateral (select state from technician_service_areas where technician_id = tp.id limit 1) a0 on true
+      where tp.verification_status = 'verified' and tp.available and tp.showcase_area is not null
+      order by a0.state, tp.rating desc, tp.completed_jobs desc
+    ) t order by completed_jobs desc limit 3
   `) as TechnicianCard[];
 });
 
