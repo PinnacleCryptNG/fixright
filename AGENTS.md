@@ -20,3 +20,5 @@
 - All client-callable server functions live in `src/lib/fixright.functions.ts` and import `*.server` modules inside handlers, keeping server-only code out of client bundles.
 - Authenticated pages live under `src/routes/_authenticated/` behind a client-rendered Clerk gate, because Clerk keeps its session in the browser.
 - Unimplemented features render `<NotBuiltYet>`; never ship fake interactive controls that imply working functionality.
+- Technician matching lives only in `src/lib/matching.server.ts` (`findMatch`), so the algorithm can be replaced (e.g. Maps distance) without touching the booking flow.
+- Booking writes live in `src/lib/booking.server.ts`; an appointment is created only in `confirmBooking`, after the customer confirms, and the slot is re-checked there to avoid double-booking.
