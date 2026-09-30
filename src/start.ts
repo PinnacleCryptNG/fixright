@@ -24,6 +24,21 @@ const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
+// Attaches the Clerk session token to every server-function call so server
+// handlers can verify the caller's identity independently of client state.
+const attachClerkAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
+  let token: string | null = null;
+  try {
+    const clerk = (globalThis as { Clerk?: { session?: { getToken: () => Promise<string | null> } } })
+      .Clerk;
+    token = (await clerk?.session?.getToken()) ?? null;
+  } catch {
+    token = null;
+  }
+  return next(token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+});
+
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware, csrfMiddleware],
+  functionMiddleware: [attachClerkAuth],
 }));
