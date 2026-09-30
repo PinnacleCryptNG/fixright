@@ -21,7 +21,7 @@ type Resolved = { address: string; state: string | null; lga: string | null; lat
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type G = any;
 declare global {
-  interface Window { google?: G; __fixrightMapsLoading?: Promise<G> }
+  interface Window { google?: G; __fixrightMapsLoading?: Promise<G> | undefined }
 }
 
 function loadMaps(key: string): Promise<G> {
