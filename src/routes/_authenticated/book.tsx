@@ -8,12 +8,12 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { ServiceIcon } from "@/components/service-icon";
+import { LocationPicker, type PickedLocation } from "@/components/location-picker";
 import { useAppUser } from "@/hooks/use-app-user";
 import {
   cancelRepairRequest,
   confirmRepairBooking,
   getRepairRequest,
-  listBookableAreas,
   listServices,
   submitRepairRequest,
 } from "@/lib/fixright.functions";
@@ -48,8 +48,7 @@ type Draft = {
   problem: string;
   brand: string;
   model: string;
-  address: string;
-  area: string;
+  loc: PickedLocation | null;
   landmark: string;
   date: string;
   windowStart: string;
@@ -62,8 +61,7 @@ const emptyDraft: Draft = {
   problem: "",
   brand: "",
   model: "",
-  address: "",
-  area: "",
+  loc: null,
   landmark: "",
   date: "",
   windowStart: "",
@@ -139,8 +137,11 @@ function BookPage() {
           problemDescription: d.problem,
           brand: d.brand || null,
           model: d.model || null,
-          address: d.address,
-          areaName: d.area,
+          address: d.loc!.address,
+          state: d.loc!.state,
+          lga: d.loc!.lga,
+          latitude: d.loc!.latitude,
+          longitude: d.loc!.longitude,
           landmark: d.landmark || null,
           date: d.date,
           windowStart: d.windowStart,
@@ -400,58 +401,30 @@ function StepProblem({ draft, update, onNext }: { draft: Draft; update: (p: Part
 }
 
 function StepLocation({ draft, update, onNext }: { draft: Draft; update: (p: Partial<Draft>) => void; onNext: () => void }) {
-  const fetchAreas = useServerFn(listBookableAreas);
-  const { data: areas } = useQuery({ queryKey: ["bookable-areas"], queryFn: () => fetchAreas() });
-  const [errors, setErrors] = useState<{ address?: string; area?: string }>({});
-
+  const [error, setError] = useState<string | null>(null);
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        const next: typeof errors = {};
-        if (draft.address.trim().length < 5) next.address = "Please enter the street address.";
-        if (!draft.area) next.area = "Please choose your area.";
-        setErrors(next);
-        if (!next.address && !next.area) onNext();
+        if (!draft.loc) { setError("Please confirm your location to continue."); return; }
+        onNext();
       }}
       className="space-y-5"
     >
       <SelectedService service={draft.service} />
       <h1 className="text-3xl sm:text-4xl">Where should the technician come?</h1>
-      <Field label="Address" error={errors.address}>
-        <input
-          className={inputCls}
-          maxLength={300}
-          aria-invalid={Boolean(errors.address)}
-          placeholder="House number and street"
-          value={draft.address}
-          onChange={(e) => update({ address: e.target.value })}
-        />
-      </Field>
-      <Field label="Area / neighbourhood" error={errors.area}>
-        <select
-          className={inputCls}
-          aria-invalid={Boolean(errors.area)}
-          value={draft.area}
-          onChange={(e) => update({ area: e.target.value })}
-        >
-          <option value="">Choose your area in Kaduna</option>
-          {areas?.map((a) => <option key={a} value={a}>{a}</option>)}
-        </select>
-      </Field>
-      <Field label="Landmark" optional>
+      <LocationPicker value={draft.loc} onConfirm={(loc) => { update({ loc }); setError(null); }} />
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      <Field label="Flat, floor or landmark" optional>
         <input
           className={inputCls}
           maxLength={160}
-          placeholder="e.g. Opposite the filling station"
+          placeholder="e.g. Flat 3, opposite the filling station"
           value={draft.landmark}
           onChange={(e) => update({ landmark: e.target.value })}
         />
       </Field>
-      <div className="flex items-start gap-2 rounded-md border border-dashed border-border bg-muted/50 p-3 text-xs text-muted-foreground">
-        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Map pin selection is coming later. Your address is only shared with the technician you confirm.
-      </div>
+      <p className="text-xs text-muted-foreground">Your address is only shared with the technician who accepts your request.</p>
       <Button type="submit" size="lg" className="w-full">Continue</Button>
     </form>
   );
@@ -557,7 +530,8 @@ function StepReview({ draft, onEdit, onSubmit, busy }: { draft: Draft; onEdit: (
           ) : null}
         </ReviewRow>
         <ReviewRow label="Location" onEdit={() => onEdit(2)}>
-          {draft.address}, {draft.area}
+          {draft.loc?.address}
+          {draft.loc ? <span className="block text-muted-foreground">{draft.loc.lga}, {draft.loc.state}</span> : null}
           {draft.landmark ? <span className="block text-muted-foreground">{draft.landmark}</span> : null}
         </ReviewRow>
         <ReviewRow label="Availability" onEdit={() => onEdit(3)}>

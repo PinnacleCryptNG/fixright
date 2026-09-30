@@ -8,7 +8,8 @@ export type NewRequestInput = {
   brand?: string | null | undefined;
   model?: string | null | undefined;
   address: string;
-  areaName: string;
+  state: string;
+  lga: string;
   landmark?: string | null | undefined;
   latitude?: number | null | undefined;
   longitude?: number | null | undefined;
@@ -18,14 +19,13 @@ export type NewRequestInput = {
 };
 
 /** Public-safe technician fields only: never phone, email or exact coordinates. */
-async function getPublicTechnician(technicianId: string, areaName: string): Promise<MatchedTechnician> {
+async function getPublicTechnician(technicianId: string, lga: string | null): Promise<MatchedTechnician> {
   const sql = getSql();
   const rows = (await sql`
     select tp.id, u.full_name, u.avatar_url, tp.rating, tp.completed_jobs, tp.years_experience,
            tp.verification_status, tp.available,
            coalesce(array_agg(distinct s.name) filter (where s.name is not null), '{}') as services,
-           (select a.area_name from technician_service_areas a
-             where a.technician_id = tp.id and lower(a.area_name) = lower(${areaName}) limit 1) as near_area
+           ${lga}::text as near_area
     from technician_profiles tp
     join users u on u.id = tp.user_id
     left join technician_services ts on ts.technician_id = tp.id
@@ -38,7 +38,7 @@ async function getPublicTechnician(technicianId: string, areaName: string): Prom
 
 const requestSelect = (sql: ReturnType<typeof getSql>, requestId: string, customerId: string) => sql`
   select r.id, r.status, r.problem_description, r.device_brand, r.device_model, r.address,
-         r.area_name, r.landmark,
+         r.area_name, r.state, r.lga, r.landmark,
          to_char(r.requested_date, 'YYYY-MM-DD') as requested_date,
          to_char(r.availability_start, 'HH24:MI') as availability_start,
          to_char(r.availability_end, 'HH24:MI') as availability_end,
@@ -63,7 +63,7 @@ async function loadBooking(requestId: string, customerId: string): Promise<Booki
   if (!row) throw new Response("Not found", { status: 404 });
   const { matched_technician_id, ...rest } = row;
   const technician = matched_technician_id
-    ? await getPublicTechnician(matched_technician_id, row.area_name ?? "")
+    ? await getPublicTechnician(matched_technician_id, row.lga ?? null)
     : null;
   const open = (await sql`select count(*)::int as n from request_offers
                           where repair_request_id = ${requestId} and status = 'offered'`) as Array<{ n: number }>;
@@ -72,7 +72,8 @@ async function loadBooking(requestId: string, customerId: string): Promise<Booki
     !technician && !waiting && rest.status === "matching" && rest.service_id && rest.requested_date
       ? await findAlternatives({
           serviceId: rest.service_id,
-          areaName: rest.area_name ?? "",
+          state: rest.state ?? "",
+          lga: rest.lga ?? "",
           date: rest.requested_date,
           windowStart: rest.availability_start ?? "08:00",
           windowEnd: rest.availability_end ?? "18:00",
@@ -89,17 +90,17 @@ async function loadBooking(requestId: string, customerId: string): Promise<Booki
 export async function dispatchRequest(requestId: string) {
   const sql = getSql();
   const rows = (await sql`
-    select service_id, area_name, status, matched_technician_id,
+    select service_id, state, lga, status, matched_technician_id,
            to_char(requested_date, 'YYYY-MM-DD') as d,
            to_char(availability_start, 'HH24:MI') as s, to_char(availability_end, 'HH24:MI') as e,
            coalesce((select array_agg(technician_id) from request_offers where repair_request_id = r.id), '{}') as seen
     from repair_requests r where id = ${requestId}
-  `) as Array<{ service_id: string; area_name: string; status: string; matched_technician_id: string | null; d: string; s: string; e: string; seen: string[] }>;
+  `) as Array<{ service_id: string; state: string; lga: string; status: string; matched_technician_id: string | null; d: string; s: string; e: string; seen: string[] }>;
   const r = rows[0];
   if (!r || r.status !== "matching" || r.matched_technician_id) return;
 
   const candidates = await findCandidates({
-    serviceId: r.service_id, areaName: r.area_name, date: r.d, windowStart: r.s, windowEnd: r.e,
+    serviceId: r.service_id, state: r.state, lga: r.lga, date: r.d, windowStart: r.s, windowEnd: r.e,
     excludeTechnicianIds: r.seen, ignoreRequestId: requestId,
   });
   if (!candidates.length) return;
@@ -189,11 +190,11 @@ export async function createRepairRequest(user: AppUser, input: NewRequestInput)
   const inserted = (await sql`
     insert into repair_requests (
       customer_id, service_id, problem_description, device_brand, device_model,
-      address, area_name, landmark, latitude, longitude,
+      address, area_name, state, lga, landmark, latitude, longitude,
       requested_date, availability_start, availability_end, status
     ) values (
       ${user.id}, ${input.serviceId}, ${input.problemDescription}, ${input.brand ?? null}, ${input.model ?? null},
-      ${input.address}, ${input.areaName}, ${input.landmark ?? null}, ${input.latitude ?? null}, ${input.longitude ?? null},
+      ${input.address}, ${`${input.lga}, ${input.state}`}, ${input.state}, ${input.lga}, ${input.landmark ?? null}, ${input.latitude ?? null}, ${input.longitude ?? null},
       ${input.date}, ${input.windowStart}, ${input.windowEnd}, 'matching'
     ) returning id
   `) as Array<{ id: string }>;
@@ -286,14 +287,4 @@ export async function listCustomerBookings(user: AppUser): Promise<CustomerBooki
     order by r.created_at desc limit 10
   `) as CustomerBookings["requests"];
   return { upcoming, requests };
-}
-
-export async function listBookableAreas(): Promise<string[]> {
-  const sql = getSql();
-  const rows = (await sql`
-    select distinct a.area_name from technician_service_areas a
-    join technician_profiles tp on tp.id = a.technician_id
-    where tp.verification_status = 'verified' order by a.area_name
-  `) as Array<{ area_name: string }>;
-  return rows.map((r) => r.area_name);
 }

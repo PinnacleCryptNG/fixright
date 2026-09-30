@@ -1,6 +1,6 @@
 import { getSql } from "./db.server";
 import { acceptOffer, declineOffer } from "./booking.server";
-import type { AppUser, TechJob, TechOffer, TechProfile } from "./types";
+import type { AppUser, Coverage, TechJob, TechOffer, TechProfile } from "./types";
 
 export async function getTechProfileId(user: AppUser): Promise<string> {
   const sql = getSql();
@@ -17,15 +17,24 @@ export async function getMyProfile(user: AppUser): Promise<TechProfile> {
   const id = await getTechProfileId(user);
   const rows = (await sql`
     select tp.id, u.full_name, u.phone, u.email, u.avatar_url, tp.bio, tp.years_experience,
-           tp.verification_status, tp.rating, tp.completed_jobs, tp.available, tp.service_radius_km,
+           tp.verification_status, tp.rating, tp.completed_jobs, tp.available,
            to_char(tp.work_start, 'HH24:MI') as work_start, to_char(tp.work_end, 'HH24:MI') as work_end,
-           coalesce((select array_agg(ts.service_id) from technician_services ts where ts.technician_id = tp.id), '{}') as service_ids,
-           coalesce((select array_agg(a.area_name order by a.area_name) from technician_service_areas a where a.technician_id = tp.id), '{}') as areas
+           coalesce((select array_agg(ts.service_id) from technician_services ts where ts.technician_id = tp.id), '{}') as service_ids
     from technician_profiles tp join users u on u.id = tp.user_id
     where tp.id = ${id}
-  `) as TechProfile[];
+  `) as Array<Omit<TechProfile, "coverage" | "onboarded">>;
+  const areas = (await sql`
+    select state, lga, covers_entire_state from technician_service_areas
+    where technician_id = ${id} order by lga
+  `) as Array<{ state: string; lga: string | null; covers_entire_state: boolean }>;
+  const coverage: Coverage = {
+    state: areas[0]?.state ?? null,
+    entireState: areas.some((a) => a.covers_entire_state),
+    lgas: areas.filter((a) => !a.covers_entire_state && a.lga).map((a) => a.lga!),
+  };
   const p = rows[0]!;
-  return { ...p, onboarded: p.service_ids.length > 0 && p.areas.length > 0 && Boolean(p.phone) };
+  const hasCoverage = Boolean(coverage.state) && (coverage.entireState || coverage.lgas.length > 0);
+  return { ...p, coverage, onboarded: p.service_ids.length > 0 && hasCoverage && Boolean(p.phone) };
 }
 
 export type ProfileInput = {
@@ -35,8 +44,9 @@ export type ProfileInput = {
   bio?: string | null | undefined;
   yearsExperience: number;
   serviceIds: string[];
-  areas: string[];
-  radiusKm: number;
+  state: string;
+  entireState: boolean;
+  lgas: string[];
   workStart: string;
   workEnd: string;
   available: boolean;
@@ -47,21 +57,25 @@ export async function saveMyProfile(user: AppUser, input: ProfileInput) {
   const sql = getSql();
   const id = await getTechProfileId(user);
   await sql`update users set full_name = ${input.fullName}, phone = ${input.phone},
-            avatar_url = ${input.avatarUrl ?? null}, updated_at = now() where id = ${user.id}`;
+            avatar_url = coalesce(${input.avatarUrl ?? null}, avatar_url), updated_at = now() where id = ${user.id}`;
   await sql`update technician_profiles set bio = ${input.bio ?? null}, years_experience = ${input.yearsExperience},
-            service_radius_km = ${input.radiusKm}, work_start = ${input.workStart}, work_end = ${input.workEnd},
+            work_start = ${input.workStart}, work_end = ${input.workEnd},
             available = ${input.available}, updated_at = now() where id = ${id}`;
   await sql`delete from technician_services where technician_id = ${id} and not (service_id = any(${input.serviceIds}::uuid[]))`;
   for (const sid of input.serviceIds) {
     await sql`insert into technician_services (technician_id, service_id) values (${id}, ${sid}) on conflict do nothing`;
   }
-  await sql`delete from technician_service_areas where technician_id = ${id} and not (area_name = any(${input.areas}::text[]))`;
-  for (const area of input.areas) {
-    await sql`insert into technician_service_areas (technician_id, area_name, radius_km)
-              select ${id}, ${area}, ${input.radiusKm}
-              where not exists (select 1 from technician_service_areas where technician_id = ${id} and area_name = ${area})`;
+  // Coverage is one state: either the whole state or a set of its LGAs.
+  await sql`delete from technician_service_areas where technician_id = ${id}`;
+  if (input.entireState) {
+    await sql`insert into technician_service_areas (technician_id, state, lga, covers_entire_state)
+              values (${id}, ${input.state}, null, true)`;
+  } else {
+    for (const lga of new Set(input.lgas)) {
+      await sql`insert into technician_service_areas (technician_id, state, lga, covers_entire_state)
+                values (${id}, ${input.state}, ${lga}, false)`;
+    }
   }
-  await sql`update technician_service_areas set radius_km = ${input.radiusKm} where technician_id = ${id}`;
   return getMyProfile(user);
 }
 
@@ -78,7 +92,7 @@ export async function listMyOffers(user: AppUser, requestId?: string): Promise<T
   const id = await getTechProfileId(user);
   return (await sql`
     select r.id, s.name as service_name, r.problem_description, r.device_brand, r.device_model,
-           r.area_name, r.address, r.landmark, r.latitude, r.longitude,
+           r.area_name, r.address, r.landmark,
            to_char(r.requested_date, 'YYYY-MM-DD') as requested_date,
            to_char(r.availability_start, 'HH24:MI') as availability_start,
            to_char(r.availability_end, 'HH24:MI') as availability_end,

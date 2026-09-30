@@ -64,7 +64,7 @@ function AdminTechnicians() {
                 <p className="text-sm text-muted-foreground">{t.years_experience} years experience</p>
                 <p className="mt-2 flex items-center gap-1.5 text-sm">
                   <MapPin className="h-4 w-4 text-primary" />
-                  {t.areas.length ? `${t.areas.join(", ")}, Kaduna` : "No areas yet"}
+                  {t.areas.length ? t.areas.join(" · ") : "No areas yet"}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">Services: {t.services.join(", ") || "None yet"}</p>
                 <Button className="mt-4" onClick={() => setReviewId(t.id)}>Review</Button>
@@ -154,8 +154,8 @@ function ReviewDialog({ id, onClose }: { id: string | null; onClose: () => void 
         ["Email", t.email ?? "—"],
         ["Experience", `${t.years_experience} years`],
         ["Services", t.services.join(", ") || "—"],
-        ["Coverage areas", t.areas.join(", ") || "—"],
-        ["Travel distance", `${t.service_radius_km} km`],
+        ["Location", t.state ? `${t.state === "Federal Capital Territory" ? t.state : `${t.state} State`}` : "Not set"],
+        ["Coverage", !t.state ? "—" : t.entire_state ? `Entire ${t.state}` : t.lgas.join(", ") || "—"],
         ["Working hours", `${formatTime(t.work_start)} – ${formatTime(t.work_end)}`],
         ["Availability", t.available ? "Available" : "Not available"],
         ["Joined", new Date(t.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })],

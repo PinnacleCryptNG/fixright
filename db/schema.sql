@@ -165,3 +165,39 @@ create index if not exists idx_offers_request on request_offers(repair_request_i
 -- Never more than one live appointment per repair request.
 create unique index if not exists uq_appointment_per_request
   on appointments(repair_request_id) where status <> 'cancelled';
+
+-- Iteration 6: nationwide State -> LGA coverage (no travel radius).
+alter table technician_service_areas add column if not exists state text;
+alter table technician_service_areas add column if not exists lga text;
+alter table technician_service_areas add column if not exists covers_entire_state boolean not null default false;
+alter table technician_service_areas add column if not exists created_at timestamptz not null default now();
+alter table technician_service_areas add column if not exists updated_at timestamptz not null default now();
+-- Convert legacy Kaduna neighbourhood rows to their LGA (only while the old column exists).
+do $$ begin
+  if exists (select 1 from information_schema.columns
+             where table_name = 'technician_service_areas' and column_name = 'area_name') then
+    execute $q$update technician_service_areas set state = 'Kaduna',
+      lga = case when area_name in ('Kakuri','Television','Tudun Wada','Kabala Costain') then 'Kaduna South'
+                 when area_name in ('Kawo','Malali','Ungwan Rimi','Ungwan Dosa') then 'Kaduna North'
+                 else 'Chikun' end
+      where state is null and area_name is not null$q$;
+  end if;
+end $$;
+delete from technician_service_areas a using technician_service_areas b
+  where a.ctid > b.ctid and a.technician_id = b.technician_id and a.state = b.state and a.lga is not distinct from b.lga;
+alter table technician_service_areas alter column state set not null;
+alter table technician_service_areas drop column if exists area_name;
+alter table technician_service_areas drop column if exists radius_km;
+alter table technician_service_areas drop column if exists latitude;
+alter table technician_service_areas drop column if exists longitude;
+alter table technician_profiles drop column if exists service_radius_km;
+create unique index if not exists uq_tech_area on technician_service_areas(technician_id, state, coalesce(lga, ''));
+create index if not exists idx_tech_area_lookup on technician_service_areas(state, lga);
+
+alter table repair_requests add column if not exists state text;
+alter table repair_requests add column if not exists lga text;
+update repair_requests set state = 'Kaduna',
+  lga = case when area_name in ('Kakuri','Television','Tudun Wada','Kabala Costain') then 'Kaduna South'
+             when area_name in ('Kawo','Malali','Ungwan Rimi','Ungwan Dosa') then 'Kaduna North'
+             else 'Chikun' end
+  where state is null and area_name is not null;

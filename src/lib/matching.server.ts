@@ -7,18 +7,19 @@ import { getSql } from "./db.server";
  *  1. technician is verified
  *  2. technician is available (accepting jobs)
  *  3. technician offers the requested service
- *  4. technician covers the customer's area
+ *  4. technician covers the customer's LGA (or their whole state)
  *  5. technician's working hours overlap the customer's window
  *  6. technician has no overlapping appointment or held (accepted, unpaid) slot
  *
  * Candidates are ranked by rating then completed jobs. Each candidate's slot is
  * the earliest free one-hour slot inside (customer window ∩ working hours).
- * Replace this module (e.g. distance-based ranking) without touching callers.
+ * No distance or radius: coverage is State -> LGA only.
  */
 
 export type MatchInput = {
   serviceId: string;
-  areaName: string;
+  state: string;
+  lga: string;
   date: string; // YYYY-MM-DD
   windowStart: string; // HH:MM
   windowEnd: string; // HH:MM
@@ -93,7 +94,8 @@ export async function findCandidates(input: MatchInput): Promise<MatchResult[]> 
       and exists (select 1 from technician_services ts
                   where ts.technician_id = tp.id and ts.service_id = ${input.serviceId})
       and exists (select 1 from technician_service_areas a
-                  where a.technician_id = tp.id and lower(a.area_name) = lower(${input.areaName}))
+                  where a.technician_id = tp.id and a.state = ${input.state}
+                    and (a.covers_entire_state or lower(a.lga) = lower(${input.lga})))
       and not (tp.id = any(${exclude}::uuid[]))
       and greatest(tp.work_start, ${input.windowStart}::time) < least(tp.work_end, ${input.windowEnd}::time)
     order by tp.rating desc, tp.completed_jobs desc

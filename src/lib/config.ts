@@ -12,9 +12,3 @@ export const SERVICE_FEE_NOTE =
   "The ₦1,000 service fee covers the technician's visit and diagnosis only. Repair labour beyond diagnosis and replacement parts are charged separately.";
 
 export const APP_NAME = "FixRight";
-
-/** Kaduna neighbourhoods technicians can cover in this iteration (no maps yet). */
-export const COVERAGE_AREAS = [
-  "Barnawa", "Kakuri", "Kawo", "Malali", "Narayi", "Sabon Tasha", "Television",
-  "Tudun Wada", "Ungwan Dosa", "Ungwan Rimi", "Gonin Gora", "Kabala Costain",
-];
