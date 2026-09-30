@@ -22,3 +22,6 @@
 - Unimplemented features render `<NotBuiltYet>`; never ship fake interactive controls that imply working functionality.
 - Technician matching lives only in `src/lib/matching.server.ts` (`findMatch`), so the algorithm can be replaced (e.g. Maps distance) without touching the booking flow.
 - Booking writes live in `src/lib/booking.server.ts`; an appointment is created only in `confirmBooking`, after the customer confirms, and the slot is re-checked there to avoid double-booking.
+- Requests are offered to every eligible technician via `request_offers`; the first accept wins through a conditional `update ... where status='matching' and matched_technician_id is null`, so duplicate claims are impossible.
+- Demo technicians have no login; `dispatchRequest` auto-accepts for the top-ranked one only when no eligible technician has a Clerk account, keeping the demo usable.
+- Technician logic lives in `src/lib/technician.server.ts`; customer contact details are exposed to a technician only after they accept.

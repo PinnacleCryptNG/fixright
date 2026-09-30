@@ -36,8 +36,8 @@ export async function syncAppUser({
     values (${identity.clerkUserId}, ${email}, ${fullName ?? null}, ${avatarUrl ?? null}, ${initialRole}::user_role)
     on conflict (clerk_user_id) do update set
       email = coalesce(excluded.email, users.email),
-      full_name = coalesce(excluded.full_name, users.full_name),
-      avatar_url = coalesce(excluded.avatar_url, users.avatar_url),
+      full_name = coalesce(users.full_name, excluded.full_name),
+      avatar_url = coalesce(users.avatar_url, excluded.avatar_url),
       updated_at = now()
     returning id, role, full_name, phone, email, avatar_url
   `) as AppUser[];

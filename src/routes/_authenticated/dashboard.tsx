@@ -25,7 +25,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 const statusLabel: Record<string, string> = {
   submitted: "Submitted",
   matching: "Finding technician",
-  technician_pending: "Awaiting your confirmation",
+  technician_pending: "Technician found",
+  on_the_way: "Technician on the way",
+  arrived: "Technician arrived",
   confirmed: "Confirmed",
   in_progress: "In progress",
   completed: "Completed",
@@ -112,7 +114,16 @@ function CustomerDashboard() {
                     <p className="text-sm font-medium">{r.service_name}</p>
                     <p className="truncate text-sm text-muted-foreground">{r.problem_description}</p>
                   </div>
-                  {r.status === "matching" && !r.has_technician ? (
+                  {r.status === "matching" && r.waiting ? (
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <span className="rounded-full border border-border px-2 py-0.5 text-xs">Waiting for a technician</span>
+                    </div>
+                  ) : r.status === "technician_pending" ? (
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs text-accent-foreground">Technician found</span>
+                      <Link to="/book" search={{ request: r.id }} className="text-xs font-medium text-primary hover:underline">Confirm &amp; pay</Link>
+                    </div>
+                  ) : r.status === "matching" && !r.has_technician ? (
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
                       <span className="rounded-full border border-border px-2 py-0.5 text-xs">No technician found</span>
                       <Link to="/book" className="text-xs font-medium text-primary hover:underline">Try again</Link>

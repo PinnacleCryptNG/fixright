@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { z } from "zod";
 import { ArrowLeft, BadgeCheck, CalendarDays, Check, CreditCard, MapPin, Star, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,6 +12,7 @@ import { useAppUser } from "@/hooks/use-app-user";
 import {
   cancelRepairRequest,
   confirmRepairBooking,
+  getRepairRequest,
   listBookableAreas,
   listServices,
   submitRepairRequest,
@@ -21,6 +23,7 @@ import type { AlternativeSlot, BookingView, ServiceRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/book")({
+  validateSearch: z.object({ request: z.string().uuid().optional() }),
   head: () => ({
     meta: [
       { title: "Book a repair — FixRight" },
@@ -69,7 +72,7 @@ const emptyDraft: Draft = {
 };
 
 const STEPS = ["Service", "Problem", "Location", "Availability", "Review"];
-type Phase = "form" | "matching" | "matched" | "payment" | "none" | "booked";
+type Phase = "form" | "matching" | "waiting" | "matched" | "payment" | "none" | "booked";
 
 function BookPage() {
   const { role, isPending } = useAppUser();
@@ -82,6 +85,33 @@ function BookPage() {
   const submit = useServerFn(submitRepairRequest);
   const confirm = useServerFn(confirmRepairBooking);
   const cancel = useServerFn(cancelRepairRequest);
+
+  const getReq = useServerFn(getRepairRequest);
+  const { request: resumeId } = Route.useSearch();
+
+  // Resume a request from the dashboard, and poll while technicians decide.
+  useEffect(() => {
+    if (!resumeId || booking) return;
+    getReq({ data: { requestId: resumeId } })
+      .then((b) => {
+        setBooking(b);
+        setPhase(b.status === "confirmed" ? "booked" : phaseFor(b));
+      })
+      .catch(() => undefined);
+  }, [resumeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (phase !== "waiting" || !booking) return;
+    const t = setInterval(() => {
+      getReq({ data: { requestId: booking.id } })
+        .then((b) => {
+          setBooking(b);
+          setPhase(phaseFor(b));
+        })
+        .catch(() => undefined);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [phase, booking?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -120,7 +150,7 @@ function BookPage() {
       const wait = Math.max(0, 2200 - (Date.now() - started));
       await new Promise((r) => setTimeout(r, wait));
       setBooking(result);
-      setPhase(result.technician ? "matched" : "none");
+      setPhase(phaseFor(result));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "We couldn't submit your request.");
       setPhase("form");
@@ -164,6 +194,19 @@ function BookPage() {
   }
 
   if (phase === "matching") return <Frame><Matching /></Frame>;
+  if (phase === "waiting" && booking) {
+    return (
+      <Frame>
+        <Matching
+          title="Waiting for a technician to accept…"
+          text={`We've sent your ${booking.service_name ?? "repair"} request to available verified technicians in ${booking.area_name}. This page updates as soon as one accepts. You won't pay anything until then.`}
+        />
+        <div className="mt-2 flex justify-center">
+          <Button variant="outline" onClick={() => handleChange()}>Change Request</Button>
+        </div>
+      </Frame>
+    );
+  }
   if (phase === "matched" && booking) {
     return (
       <Frame>
@@ -561,7 +604,14 @@ function SelectedService({ service }: { service: ServiceRecord | null }) {
 
 /* --------------------------------------------------------- post-submit */
 
-function Matching() {
+function phaseFor(b: BookingView): Phase {
+  return b.technician ? "matched" : b.waiting ? "waiting" : "none";
+}
+
+function Matching({
+  title = "Finding a technician near you…",
+  text = "Checking verified technicians, their areas and schedules.",
+}: { title?: string; text?: string }) {
   return (
     <div className="flex flex-col items-center py-16 text-center">
       <div className="relative flex h-24 w-24 items-center justify-center">
@@ -571,8 +621,8 @@ function Matching() {
           <MapPin className="h-6 w-6" />
         </span>
       </div>
-      <h1 className="mt-8 text-2xl sm:text-3xl">Finding a technician near you…</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Checking verified technicians, their areas and schedules.</p>
+      <h1 className="mt-8 text-2xl sm:text-3xl">{title}</h1>
+      <p className="mt-2 max-w-md text-sm text-muted-foreground">{text}</p>
     </div>
   );
 }

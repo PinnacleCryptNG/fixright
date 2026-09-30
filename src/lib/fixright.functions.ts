@@ -218,3 +218,95 @@ export const getMyBookings = createServerFn({ method: "GET" }).handler(async () 
   const m = await import("./booking.server");
   return m.listCustomerBookings(user);
 });
+
+// ---------------------------------------------------------------------------
+// Technician experience
+// ---------------------------------------------------------------------------
+
+async function requireTechnician() {
+  const { requireIdentity } = await import("./clerk-auth.server");
+  const { requireRole } = await import("./users.server");
+  return requireRole(await requireIdentity(), ["technician"]);
+}
+
+export const getMyTechProfile = createServerFn({ method: "GET" }).handler(async () => {
+  const user = await requireTechnician();
+  const m = await import("./technician.server");
+  return m.getMyProfile(user);
+});
+
+const profileSchema = z
+  .object({
+    fullName: z.string().trim().min(2).max(120),
+    phone: z.string().trim().regex(/^\+?[0-9 ]{10,16}$/, "Enter a valid phone number"),
+    avatarUrl: z.string().trim().url().max(500).nullable().optional().or(z.literal("").transform(() => null)),
+    bio: z.string().trim().max(600).nullable().optional(),
+    yearsExperience: z.number().int().min(0).max(60),
+    serviceIds: z.array(z.string().uuid()).min(1).max(20),
+    areas: z.array(z.string().trim().min(2).max(80)).min(1).max(20),
+    radiusKm: z.number().int().min(1).max(50),
+    workStart: z.string().regex(timeRe),
+    workEnd: z.string().regex(timeRe),
+    available: z.boolean(),
+  })
+  .refine((d) => d.workEnd > d.workStart, { message: "Working hours must end after they start" });
+
+export const saveMyTechProfile = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => profileSchema.parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireTechnician();
+    const m = await import("./technician.server");
+    return m.saveMyProfile(user, data);
+  });
+
+export const setMyAvailability = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ available: z.boolean() }).parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireTechnician();
+    const m = await import("./technician.server");
+    return m.setMyAvailability(user, data.available);
+  });
+
+export const listMyOffers = createServerFn({ method: "GET" }).handler(async () => {
+  const user = await requireTechnician();
+  const m = await import("./technician.server");
+  return m.listMyOffers(user);
+});
+
+export const getMyOffer = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => idSchema.parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireTechnician();
+    const m = await import("./technician.server");
+    return (await m.listMyOffers(user, data.requestId))[0] ?? null;
+  });
+
+export const acceptRequest = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => idSchema.parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireTechnician();
+    const m = await import("./technician.server");
+    return m.acceptMyOffer(user, data.requestId);
+  });
+
+export const declineRequest = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => idSchema.parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireTechnician();
+    const m = await import("./technician.server");
+    return m.declineMyOffer(user, data.requestId);
+  });
+
+export const listMyJobs = createServerFn({ method: "GET" }).handler(async () => {
+  const user = await requireTechnician();
+  const m = await import("./technician.server");
+  return m.listMyJobs(user);
+});
+
+export const advanceJob = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ appointmentId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const user = await requireTechnician();
+    const m = await import("./technician.server");
+    return m.advanceMyJob(user, data.appointmentId);
+  });

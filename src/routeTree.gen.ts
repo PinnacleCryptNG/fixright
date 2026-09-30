@@ -25,7 +25,10 @@ import { Route as AuthenticatedAdminServicesRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminTechniciansRouteImport } from './routes/_authenticated/admin.technicians'
 import { Route as AuthenticatedTechnicianIndexRouteImport } from './routes/_authenticated/technician.index'
 import { Route as AuthenticatedTechnicianDashboardRouteImport } from './routes/_authenticated/technician.dashboard'
+import { Route as AuthenticatedTechnicianJobsRouteImport } from './routes/_authenticated/technician.jobs'
 import { Route as AuthenticatedTechnicianProfileRouteImport } from './routes/_authenticated/technician.profile'
+import { Route as AuthenticatedTechnicianRequestsIndexRouteImport } from './routes/_authenticated/technician.requests.index'
+import { Route as AuthenticatedTechnicianRequestsRequestIdRouteImport } from './routes/_authenticated/technician.requests.$requestId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -113,10 +116,28 @@ const AuthenticatedTechnicianDashboardRoute =
     path: '/dashboard',
     getParentRoute: () => AuthenticatedTechnicianRoute,
   } as any)
+const AuthenticatedTechnicianJobsRoute =
+  AuthenticatedTechnicianJobsRouteImport.update({
+    id: '/jobs',
+    path: '/jobs',
+    getParentRoute: () => AuthenticatedTechnicianRoute,
+  } as any)
 const AuthenticatedTechnicianProfileRoute =
   AuthenticatedTechnicianProfileRouteImport.update({
     id: '/profile',
     path: '/profile',
+    getParentRoute: () => AuthenticatedTechnicianRoute,
+  } as any)
+const AuthenticatedTechnicianRequestsIndexRoute =
+  AuthenticatedTechnicianRequestsIndexRouteImport.update({
+    id: '/requests/',
+    path: '/requests/',
+    getParentRoute: () => AuthenticatedTechnicianRoute,
+  } as any)
+const AuthenticatedTechnicianRequestsRequestIdRoute =
+  AuthenticatedTechnicianRequestsRequestIdRouteImport.update({
+    id: '/requests/$requestId',
+    path: '/requests/$requestId',
     getParentRoute: () => AuthenticatedTechnicianRoute,
   } as any)
 
@@ -134,9 +155,12 @@ export interface FileRoutesByFullPath {
   '/admin/services': typeof AuthenticatedAdminServicesRoute
   '/admin/technicians': typeof AuthenticatedAdminTechniciansRoute
   '/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
+  '/technician/jobs': typeof AuthenticatedTechnicianJobsRoute
   '/technician/profile': typeof AuthenticatedTechnicianProfileRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/technician/': typeof AuthenticatedTechnicianIndexRoute
+  '/technician/requests/$requestId': typeof AuthenticatedTechnicianRequestsRequestIdRoute
+  '/technician/requests/': typeof AuthenticatedTechnicianRequestsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,9 +174,12 @@ export interface FileRoutesByTo {
   '/admin/services': typeof AuthenticatedAdminServicesRoute
   '/admin/technicians': typeof AuthenticatedAdminTechniciansRoute
   '/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
+  '/technician/jobs': typeof AuthenticatedTechnicianJobsRoute
   '/technician/profile': typeof AuthenticatedTechnicianProfileRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/technician': typeof AuthenticatedTechnicianIndexRoute
+  '/technician/requests/$requestId': typeof AuthenticatedTechnicianRequestsRequestIdRoute
+  '/technician/requests': typeof AuthenticatedTechnicianRequestsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -170,9 +197,12 @@ export interface FileRoutesById {
   '/_authenticated/admin/services': typeof AuthenticatedAdminServicesRoute
   '/_authenticated/admin/technicians': typeof AuthenticatedAdminTechniciansRoute
   '/_authenticated/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
+  '/_authenticated/technician/jobs': typeof AuthenticatedTechnicianJobsRoute
   '/_authenticated/technician/profile': typeof AuthenticatedTechnicianProfileRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/technician/': typeof AuthenticatedTechnicianIndexRoute
+  '/_authenticated/technician/requests/$requestId': typeof AuthenticatedTechnicianRequestsRequestIdRoute
+  '/_authenticated/technician/requests/': typeof AuthenticatedTechnicianRequestsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -190,9 +220,12 @@ export interface FileRouteTypes {
     | '/admin/services'
     | '/admin/technicians'
     | '/technician/dashboard'
+    | '/technician/jobs'
     | '/technician/profile'
     | '/admin/'
     | '/technician/'
+    | '/technician/requests/$requestId'
+    | '/technician/requests/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -206,9 +239,12 @@ export interface FileRouteTypes {
     | '/admin/services'
     | '/admin/technicians'
     | '/technician/dashboard'
+    | '/technician/jobs'
     | '/technician/profile'
     | '/admin'
     | '/technician'
+    | '/technician/requests/$requestId'
+    | '/technician/requests'
   id:
     | '__root__'
     | '/'
@@ -225,9 +261,12 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/services'
     | '/_authenticated/admin/technicians'
     | '/_authenticated/technician/dashboard'
+    | '/_authenticated/technician/jobs'
     | '/_authenticated/technician/profile'
     | '/_authenticated/admin/'
     | '/_authenticated/technician/'
+    | '/_authenticated/technician/requests/$requestId'
+    | '/_authenticated/technician/requests/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -351,11 +390,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTechnicianDashboardRouteImport
       parentRoute: typeof AuthenticatedTechnicianRoute
     }
+    '/_authenticated/technician/jobs': {
+      id: '/_authenticated/technician/jobs'
+      path: '/jobs'
+      fullPath: '/technician/jobs'
+      preLoaderRoute: typeof AuthenticatedTechnicianJobsRouteImport
+      parentRoute: typeof AuthenticatedTechnicianRoute
+    }
     '/_authenticated/technician/profile': {
       id: '/_authenticated/technician/profile'
       path: '/profile'
       fullPath: '/technician/profile'
       preLoaderRoute: typeof AuthenticatedTechnicianProfileRouteImport
+      parentRoute: typeof AuthenticatedTechnicianRoute
+    }
+    '/_authenticated/technician/requests/': {
+      id: '/_authenticated/technician/requests/'
+      path: '/requests'
+      fullPath: '/technician/requests/'
+      preLoaderRoute: typeof AuthenticatedTechnicianRequestsIndexRouteImport
+      parentRoute: typeof AuthenticatedTechnicianRoute
+    }
+    '/_authenticated/technician/requests/$requestId': {
+      id: '/_authenticated/technician/requests/$requestId'
+      path: '/requests/$requestId'
+      fullPath: '/technician/requests/$requestId'
+      preLoaderRoute: typeof AuthenticatedTechnicianRequestsRequestIdRouteImport
       parentRoute: typeof AuthenticatedTechnicianRoute
     }
   }
@@ -384,16 +444,24 @@ const AuthenticatedAdminRouteWithChildren =
 
 interface AuthenticatedTechnicianRouteChildren {
   AuthenticatedTechnicianDashboardRoute: typeof AuthenticatedTechnicianDashboardRoute
+  AuthenticatedTechnicianJobsRoute: typeof AuthenticatedTechnicianJobsRoute
   AuthenticatedTechnicianProfileRoute: typeof AuthenticatedTechnicianProfileRoute
   AuthenticatedTechnicianIndexRoute: typeof AuthenticatedTechnicianIndexRoute
+  AuthenticatedTechnicianRequestsRequestIdRoute: typeof AuthenticatedTechnicianRequestsRequestIdRoute
+  AuthenticatedTechnicianRequestsIndexRoute: typeof AuthenticatedTechnicianRequestsIndexRoute
 }
 
 const AuthenticatedTechnicianRouteChildren: AuthenticatedTechnicianRouteChildren =
   {
     AuthenticatedTechnicianDashboardRoute:
       AuthenticatedTechnicianDashboardRoute,
+    AuthenticatedTechnicianJobsRoute: AuthenticatedTechnicianJobsRoute,
     AuthenticatedTechnicianProfileRoute: AuthenticatedTechnicianProfileRoute,
     AuthenticatedTechnicianIndexRoute: AuthenticatedTechnicianIndexRoute,
+    AuthenticatedTechnicianRequestsRequestIdRoute:
+      AuthenticatedTechnicianRequestsRequestIdRoute,
+    AuthenticatedTechnicianRequestsIndexRoute:
+      AuthenticatedTechnicianRequestsIndexRoute,
   }
 
 const AuthenticatedTechnicianRouteWithChildren =

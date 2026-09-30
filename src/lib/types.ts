@@ -14,6 +14,8 @@ export type RepairRequestStatus =
 export type AppointmentStatus =
   | "scheduled"
   | "confirmed"
+  | "on_the_way"
+  | "arrived"
   | "in_progress"
   | "completed"
   | "cancelled"
@@ -96,6 +98,8 @@ export type BookingView = {
   payment_status: PaymentStatus | null;
   technician: MatchedTechnician | null;
   alternatives: AlternativeSlot[];
+  /** Offered to technicians, none has accepted yet. */
+  waiting: boolean;
 };
 
 export type AlternativeSlot = { date: string; start: string; end: string };
@@ -123,5 +127,65 @@ export type CustomerBookings = {
     created_at: string;
     requested_date: string | null;
     has_technician: boolean;
+    waiting: boolean;
   }>;
+};
+
+export type TechProfile = {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  years_experience: number;
+  verification_status: VerificationStatus;
+  rating: string;
+  completed_jobs: number;
+  available: boolean;
+  service_radius_km: number;
+  work_start: string;
+  work_end: string;
+  service_ids: string[];
+  areas: string[];
+  onboarded: boolean;
+};
+
+export type TechOffer = {
+  id: string;
+  service_name: string | null;
+  problem_description: string;
+  device_brand: string | null;
+  device_model: string | null;
+  area_name: string | null;
+  address: string | null;
+  landmark: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  requested_date: string | null;
+  availability_start: string | null;
+  availability_end: string | null;
+  proposed_date: string;
+  proposed_start: string;
+  proposed_end: string;
+  service_fee: string | null;
+  offered_at: string;
+  offer_status: "offered" | "accepted" | "declined" | "withdrawn";
+};
+
+export type TechJob = {
+  id: string;
+  repair_request_id: string | null;
+  status: AppointmentStatus | "awaiting_payment";
+  payment_status: PaymentStatus;
+  service_name: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  address: string | null;
+  area_name: string | null;
+  landmark: string | null;
+  problem_description: string | null;
+  date: string;
+  start_time: string | null;
+  end_time: string | null;
 };
