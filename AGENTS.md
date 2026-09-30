@@ -27,5 +27,5 @@
 - Technician logic lives in `src/lib/technician.server.ts`; customer contact details are exposed to a technician only after they accept.
 - Nigerian states and LGAs live only in `src/lib/nigeria-locations.ts` (36 states + FCT, 774 LGAs), used by both UI and server validation, so location data is maintained in one place.
 - Technician coverage is one state, either `covers_entire_state` or specific LGAs in `technician_service_areas`; there is no travel radius or distance matching.
-- Customer location comes from Google Maps (`src/components/location-picker.tsx`), which reverse-geocodes State + LGA; an uncertain LGA is never guessed, and a manual State/LGA fallback is shown only if the map can't load.
+- Customer location comes from Mapbox (GL JS + Geocoding v6, country=NG, pk token served by `getMapsConfig` from MAPBOX_PUBLIC_TOKEN) in `src/components/location-picker.tsx`, which reverse-geocodes State + LGA; an uncertain LGA is never guessed, and a manual State/LGA fallback is shown only if the map can't load.
 - Technician profile photos upload through Clerk (`user.setProfileImage`), and the resulting URL is stored in `users.avatar_url`; there is no separate image hosting.
