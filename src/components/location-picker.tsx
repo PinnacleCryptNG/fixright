@@ -234,6 +234,9 @@ function MapLocation({ token, value, onConfirm, onFail }: { token: string; value
   );
 }
 
+/** Used only if the map can't load, so booking is never blocked. */
+function ManualLocation({ value, onConfirm }: { value: PickedLocation | null; onConfirm: (v: PickedLocation) => void }) {
+  const [address, setAddress] = useState(value?.address ?? "");
   const [state, setState] = useState(value?.state ?? "");
   const [lga, setLga] = useState(value?.lga ?? "");
   const ready = address.trim().length >= 5 && state && lga;
