@@ -310,3 +310,54 @@ export const advanceJob = createServerFn({ method: "POST" })
     const m = await import("./technician.server");
     return m.advanceMyJob(user, data.appointmentId);
   });
+
+/** Admin only: full technician profile for review. */
+export const adminGetTechnician = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { requireIdentity } = await import("./clerk-auth.server");
+    const { requireRole } = await import("./users.server");
+    const { getSql } = await import("./db.server");
+    await requireRole(await requireIdentity(), ["admin"]);
+    const sql = getSql();
+    const rows = (await sql`
+      select tp.id, u.full_name, u.email, u.phone, u.avatar_url, tp.bio, tp.years_experience,
+             tp.verification_status, tp.available, tp.service_radius_km, tp.rating, tp.completed_jobs,
+             to_char(tp.work_start, 'HH24:MI') as work_start, to_char(tp.work_end, 'HH24:MI') as work_end,
+             u.created_at,
+             coalesce((select array_agg(a.area_name order by a.area_name) from technician_service_areas a where a.technician_id = tp.id), '{}') as areas,
+             coalesce((select array_agg(s.name order by s.name) from technician_services ts join services s on s.id = ts.service_id where ts.technician_id = tp.id), '{}') as services
+      from technician_profiles tp join users u on u.id = tp.user_id
+      where tp.id = ${data.id}
+    `) as Array<{
+      id: string; full_name: string | null; email: string | null; phone: string | null; avatar_url: string | null;
+      bio: string | null; years_experience: number; verification_status: import("./types").VerificationStatus;
+      available: boolean; service_radius_km: number; rating: string; completed_jobs: number;
+      work_start: string; work_end: string; created_at: string; areas: string[]; services: string[];
+    }>;
+    if (!rows[0]) throw new Error("Technician not found.");
+    return rows[0];
+  });
+
+/** Admin only: change a technician's verification status (persisted). */
+export const adminSetVerification = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z.object({ id: z.string().uuid(), status: z.enum(["pending", "verified", "rejected", "suspended"]) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { requireIdentity } = await import("./clerk-auth.server");
+    const { requireRole } = await import("./users.server");
+    const { getSql } = await import("./db.server");
+    await requireRole(await requireIdentity(), ["admin"]);
+    const sql = getSql();
+    const rows = await sql`
+      update technician_profiles set verification_status = ${data.status}::verification_status, updated_at = now()
+      where id = ${data.id} returning id`;
+    if (rows.length === 0) throw new Error("Technician not found.");
+    if (data.status !== "verified") {
+      // Ineligible technicians lose any open offers immediately.
+      await sql`update request_offers set status = 'withdrawn', responded_at = now()
+                where technician_id = ${data.id} and status = 'offered'`;
+    }
+    return { ok: true, status: data.status };
+  });
