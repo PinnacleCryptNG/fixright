@@ -120,3 +120,14 @@ create index if not exists idx_users_clerk on users(clerk_user_id);
 create index if not exists idx_tech_available on technician_profiles(available, verification_status);
 create index if not exists idx_requests_status on repair_requests(status);
 create index if not exists idx_appointments_date on appointments(appointment_date);
+
+-- Iteration 2: repair-request booking flow
+alter table repair_requests add column if not exists device_brand text;
+alter table repair_requests add column if not exists device_model text;
+alter table repair_requests add column if not exists area_name text;
+alter table repair_requests add column if not exists landmark text;
+alter table repair_requests add column if not exists proposed_date date;
+alter table repair_requests add column if not exists proposed_start time;
+alter table repair_requests add column if not exists proposed_end time;
+create index if not exists idx_requests_customer on repair_requests(customer_id, created_at desc);
+create index if not exists idx_appointments_tech_date on appointments(technician_id, appointment_date);

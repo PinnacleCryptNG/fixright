@@ -58,3 +58,20 @@ join users u on u.email = v.email
 join technician_profiles tp on tp.user_id = u.id
 join services s on s.name = v.service
 on conflict (technician_id, service_id) do nothing;
+
+-- Neighbouring areas each demo technician also covers (fictional coverage).
+insert into technician_service_areas (technician_id, area_name, latitude, longitude, radius_km)
+select tp.id, v.area, v.lat, v.lng, 8
+from (values
+  ('musa.ibrahim@demo.fixright.ng', 'Sabon Tasha', 10.4420, 7.4630),
+  ('musa.ibrahim@demo.fixright.ng', 'Barnawa', 10.4808, 7.4231),
+  ('ibrahim.sule@demo.fixright.ng', 'Narayi', 10.4649, 7.4360),
+  ('ibrahim.sule@demo.fixright.ng', 'Kakuri', 10.4756, 7.4096),
+  ('yusuf.ahmed@demo.fixright.ng', 'Barnawa', 10.4808, 7.4231),
+  ('yusuf.ahmed@demo.fixright.ng', 'Narayi', 10.4649, 7.4360)
+) as v(email, area, lat, lng)
+join users u on u.email = v.email
+join technician_profiles tp on tp.user_id = u.id
+where not exists (
+  select 1 from technician_service_areas a where a.technician_id = tp.id and a.area_name = v.area
+);
