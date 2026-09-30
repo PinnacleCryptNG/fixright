@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedBookRouteImport } from './routes/_authenticated/book'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedTechnicianRouteImport } from './routes/_authenticated/technician'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
@@ -48,6 +49,11 @@ const SignUpRoute = SignUpRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBookRoute = AuthenticatedBookRouteImport.update({
+  id: '/book',
+  path: '/book',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/book': typeof AuthenticatedBookRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/technician': typeof AuthenticatedTechnicianRouteWithChildren
   '/admin/appointments': typeof AuthenticatedAdminAppointmentsRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/book': typeof AuthenticatedBookRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/admin/appointments': typeof AuthenticatedAdminAppointmentsRoute
   '/admin/customers': typeof AuthenticatedAdminCustomersRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/book': typeof AuthenticatedBookRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/technician': typeof AuthenticatedTechnicianRouteWithChildren
   '/_authenticated/admin/appointments': typeof AuthenticatedAdminAppointmentsRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/admin'
+    | '/book'
     | '/dashboard'
     | '/technician'
     | '/admin/appointments'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/sign-up'
+    | '/book'
     | '/dashboard'
     | '/admin/appointments'
     | '/admin/customers'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/_authenticated/admin'
+    | '/_authenticated/book'
     | '/_authenticated/dashboard'
     | '/_authenticated/technician'
     | '/_authenticated/admin/appointments'
@@ -260,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/book': {
+      id: '/_authenticated/book'
+      path: '/book'
+      fullPath: '/book'
+      preLoaderRoute: typeof AuthenticatedBookRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -384,12 +403,14 @@ const AuthenticatedTechnicianRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedBookRoute: typeof AuthenticatedBookRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedTechnicianRoute: typeof AuthenticatedTechnicianRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedBookRoute: AuthenticatedBookRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedTechnicianRoute: AuthenticatedTechnicianRouteWithChildren,
 }

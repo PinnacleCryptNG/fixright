@@ -97,7 +97,7 @@ function Landing() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg">
-                  <Link to="/sign-up" search={{ role: "customer" }}>
+                  <Link to="/book">
                     Find a Technician
                   </Link>
                 </Button>
@@ -216,7 +216,7 @@ function Landing() {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg">
-                <Link to="/sign-up" search={{ role: "customer" }}>
+                <Link to="/book">
                   Find a Technician
                 </Link>
               </Button>
