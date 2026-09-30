@@ -134,3 +134,34 @@ create index if not exists idx_appointments_tech_date on appointments(technician
 
 -- Booking v2: appointments are created already confirmed after demo payment.
 alter type appointment_status add value if not exists 'confirmed';
+
+-- Iteration 4: technician experience
+alter type appointment_status add value if not exists 'on_the_way';
+alter type appointment_status add value if not exists 'arrived';
+
+do $$ begin
+  create type offer_status as enum ('offered', 'accepted', 'declined', 'withdrawn');
+exception when duplicate_object then null; end $$;
+
+alter table technician_profiles add column if not exists work_start time not null default '08:00';
+alter table technician_profiles add column if not exists work_end time not null default '18:00';
+
+-- A request is offered to every eligible technician; the first to accept claims it.
+create table if not exists request_offers (
+  id uuid primary key default gen_random_uuid(),
+  repair_request_id uuid not null references repair_requests(id) on delete cascade,
+  technician_id uuid not null references technician_profiles(id) on delete cascade,
+  proposed_date date not null,
+  proposed_start time not null,
+  proposed_end time not null,
+  status offer_status not null default 'offered',
+  created_at timestamptz not null default now(),
+  responded_at timestamptz,
+  unique (repair_request_id, technician_id)
+);
+create index if not exists idx_offers_tech on request_offers(technician_id, status);
+create index if not exists idx_offers_request on request_offers(repair_request_id, status);
+
+-- Never more than one live appointment per repair request.
+create unique index if not exists uq_appointment_per_request
+  on appointments(repair_request_id) where status <> 'cancelled';
