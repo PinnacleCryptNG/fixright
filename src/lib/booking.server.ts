@@ -131,14 +131,15 @@ export async function acceptOffer(technicianId: string, requestId: string) {
            to_char(o.proposed_start, 'HH24:MI') as s, to_char(o.proposed_end, 'HH24:MI') as e,
            to_char(greatest(tp.work_start, r.availability_start), 'HH24:MI') as ws,
            to_char(least(tp.work_end, r.availability_end), 'HH24:MI') as we,
-           r.status as request_status, r.matched_technician_id
+           r.status as request_status, r.matched_technician_id, tp.verification_status as vs
     from request_offers o
     join repair_requests r on r.id = o.repair_request_id
     join technician_profiles tp on tp.id = o.technician_id
     where o.repair_request_id = ${requestId} and o.technician_id = ${technicianId}
-  `) as Array<{ status: string; d: string; s: string; e: string; ws: string; we: string; request_status: string; matched_technician_id: string | null }>;
+  `) as Array<{ status: string; d: string; s: string; e: string; ws: string; we: string; request_status: string; matched_technician_id: string | null; vs: string }>;
   const o = offers[0];
   if (!o) throw new Error("This request isn't available to you.");
+  if (o.vs !== "verified") throw new Error("Only verified technicians can accept requests.");
   if (o.matched_technician_id && o.matched_technician_id !== technicianId) throw new Error(ALREADY_ACCEPTED);
   if (o.matched_technician_id === technicianId) return { ok: true };
   if (o.status !== "offered" || o.request_status !== "matching") {

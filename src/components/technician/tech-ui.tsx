@@ -141,11 +141,22 @@ export function OfferCard({ offer }: { offer: TechOffer }) {
 }
 
 export function NotVerifiedNotice({ status }: { status: VerificationStatus }) {
-  if (status === "verified") return null;
+  const copy: Record<VerificationStatus, [string, string]> = {
+    verified: ["✓ Verified technician", "Your profile is verified. You're eligible to receive repair requests when you're available."],
+    pending: ["Verification pending", "Your profile is waiting for admin verification. You won't receive repair requests until you're verified."],
+    rejected: ["Verification not approved", "Your profile wasn't approved yet. You won't receive repair requests. Please contact FixRight for details."],
+    suspended: ["Account suspended", "Your account is suspended, so you won't receive repair requests. Please contact FixRight."],
+  };
+  const [title, body] = copy[status];
   return (
-    <div className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
-      Only verified technicians receive customer requests. Your account is{" "}
-      <span className="font-medium text-foreground">{status}</span>. The FixRight team reviews new technicians.
+    <div
+      className={cn(
+        "rounded-lg border p-4 text-sm",
+        status === "verified" ? "border-primary/40 bg-primary-soft" : "border-border bg-muted",
+      )}
+    >
+      <p className="font-semibold text-foreground">{title}</p>
+      <p className="mt-1 text-muted-foreground">{body}</p>
     </div>
   );
 }
