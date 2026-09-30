@@ -15,6 +15,7 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedTechnicianRouteImport } from './routes/_authenticated/technician'
+import { Route as AuthenticatedTechnicianIndexRouteImport } from './routes/_authenticated/technician.index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,20 +46,27 @@ const AuthenticatedTechnicianRoute = AuthenticatedTechnicianRouteImport.update({
   path: '/technician',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTechnicianIndexRoute =
+  AuthenticatedTechnicianIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedTechnicianRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/technician': typeof AuthenticatedTechnicianRoute
+  '/technician': typeof AuthenticatedTechnicianRouteWithChildren
+  '/technician/': typeof AuthenticatedTechnicianIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/technician': typeof AuthenticatedTechnicianRoute
+  '/technician': typeof AuthenticatedTechnicianIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -67,11 +75,18 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/technician': typeof AuthenticatedTechnicianRoute
+  '/_authenticated/technician': typeof AuthenticatedTechnicianRouteWithChildren
+  '/_authenticated/technician/': typeof AuthenticatedTechnicianIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/sign-up' | '/dashboard' | '/technician'
+  fullPaths:
+    | '/'
+    | '/sign-in'
+    | '/sign-up'
+    | '/dashboard'
+    | '/technician'
+    | '/technician/'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/sign-in' | '/sign-up' | '/dashboard' | '/technician'
   id:
@@ -82,6 +97,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/_authenticated/dashboard'
     | '/_authenticated/technician'
+    | '/_authenticated/technician/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -135,17 +151,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTechnicianRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/technician/': {
+      id: '/_authenticated/technician/'
+      path: '/'
+      fullPath: '/technician/'
+      preLoaderRoute: typeof AuthenticatedTechnicianIndexRouteImport
+      parentRoute: typeof AuthenticatedTechnicianRoute
+    }
   }
 }
 
+interface AuthenticatedTechnicianRouteChildren {
+  AuthenticatedTechnicianIndexRoute: typeof AuthenticatedTechnicianIndexRoute
+}
+
+const AuthenticatedTechnicianRouteChildren: AuthenticatedTechnicianRouteChildren =
+  {
+    AuthenticatedTechnicianIndexRoute: AuthenticatedTechnicianIndexRoute,
+  }
+
+const AuthenticatedTechnicianRouteWithChildren =
+  AuthenticatedTechnicianRoute._addFileChildren(
+    AuthenticatedTechnicianRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedTechnicianRoute: typeof AuthenticatedTechnicianRoute
+  AuthenticatedTechnicianRoute: typeof AuthenticatedTechnicianRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedTechnicianRoute: AuthenticatedTechnicianRoute,
+  AuthenticatedTechnicianRoute: AuthenticatedTechnicianRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =
