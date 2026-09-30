@@ -115,7 +115,7 @@ export function SiteHeader() {
           </SignedOut>
           <SignedIn>
             <Link
-              to="/dashboard"
+              to={dashboardHref}
               onClick={() => setOpen(false)}
               className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
