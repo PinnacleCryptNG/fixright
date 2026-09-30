@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { AvailabilityToggle, NotVerifiedNotice, OfferCard, techKeys, useTechProfile, VerificationBadge } from "@/components/technician/tech-ui";
 import { Button } from "@/components/ui/button";
-import { listMyJobs, listMyOffers } from "@/lib/fixright.functions";
+import { listMyJobs } from "@/lib/fixright.functions";
+import { NotificationPermissionControl, useOpenOffers } from "@/components/technician/request-notifications";
 import { formatSlot } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/technician/dashboard")({
@@ -24,9 +25,8 @@ function greeting() {
 
 function TechnicianDashboard() {
   const { data: profile } = useTechProfile();
-  const fetchOffers = useServerFn(listMyOffers);
   const fetchJobs = useServerFn(listMyJobs);
-  const offers = useQuery({ queryKey: techKeys.offers, queryFn: () => fetchOffers(), refetchInterval: 15_000 });
+  const offers = useOpenOffers();
   const jobs = useQuery({ queryKey: techKeys.jobs, queryFn: () => fetchJobs() });
   const next = (jobs.data ?? []).filter((j) => j.status !== "completed").slice(0, 3);
 
@@ -49,11 +49,19 @@ function TechnicianDashboard() {
       ) : null}
 
       <AvailabilityToggle />
+      <NotificationPermissionControl />
       {profile ? <NotVerifiedNotice status={profile.verification_status} /> : null}
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">New requests</h2>
+          <div>
+            <h2 className="text-lg font-semibold">New requests</h2>
+            {offers.data?.length ? (
+              <p className="text-sm font-medium text-primary">
+                {offers.data.length} new request{offers.data.length === 1 ? "" : "s"}
+              </p>
+            ) : null}
+          </div>
           <Link to="/technician/requests" className="text-sm font-medium text-primary hover:underline">See all</Link>
         </div>
         {offers.isLoading ? (

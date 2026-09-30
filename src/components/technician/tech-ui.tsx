@@ -133,7 +133,7 @@ export function OfferCard({ offer }: { offer: TechOffer }) {
         <Button disabled={busy} onClick={() => acceptM.mutate(offer.id)}>Accept Request</Button>
         <Button variant="outline" disabled={busy} onClick={() => declineM.mutate(offer.id)}>Decline</Button>
         <Button asChild variant="ghost">
-          <Link to="/technician/requests/$requestId" params={{ requestId: offer.id }}>View details</Link>
+          <Link to="/technician/requests/$requestId" params={{ requestId: offer.id }}>View Request</Link>
         </Button>
       </div>
     </div>
