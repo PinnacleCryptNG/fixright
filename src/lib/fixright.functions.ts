@@ -57,7 +57,7 @@ export const syncCurrentUser = createServerFn({ method: "POST" })
       identity,
       fullName: data.fullName ?? null,
       avatarUrl: data.avatarUrl ?? null,
-      desiredRole: data.desiredRole,
+      ...(data.desiredRole ? { desiredRole: data.desiredRole } : {}),
     });
   });
 
