@@ -24,6 +24,10 @@ export function useAppUser() {
         data: {
           fullName: user?.fullName ?? null,
           avatarUrl: user?.imageUrl ?? null,
+          // Only a *requested* role; the server decides what is actually granted.
+          desiredRole:
+            (user?.unsafeMetadata as { desiredRole?: "customer" | "technician" } | undefined)
+              ?.desiredRole,
         },
       }),
   });
