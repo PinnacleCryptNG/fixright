@@ -23,6 +23,7 @@ import type { AlternativeSlot, BookingView, ServiceRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/book")({
+  validateSearch: z.object({ request: z.string().uuid().optional() }),
   head: () => ({
     meta: [
       { title: "Book a repair — FixRight" },
