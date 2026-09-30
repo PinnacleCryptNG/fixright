@@ -54,6 +54,9 @@ export type TechnicianCard = {
   services: string[];
 };
 
+/** Where a technician operates: one state, either entirely or specific LGAs. */
+export type Coverage = { state: string | null; entireState: boolean; lgas: string[] };
+
 export type AdminOverview = {
   customers: number;
   technicians: number;
@@ -84,6 +87,8 @@ export type BookingView = {
   device_model: string | null;
   address: string | null;
   area_name: string | null;
+  state: string | null;
+  lga: string | null;
   landmark: string | null;
   requested_date: string | null;
   availability_start: string | null;
@@ -143,11 +148,10 @@ export type TechProfile = {
   rating: string;
   completed_jobs: number;
   available: boolean;
-  service_radius_km: number;
   work_start: string;
   work_end: string;
   service_ids: string[];
-  areas: string[];
+  coverage: Coverage;
   onboarded: boolean;
 };
 
@@ -160,8 +164,6 @@ export type TechOffer = {
   area_name: string | null;
   address: string | null;
   landmark: string | null;
-  latitude: number | null;
-  longitude: number | null;
   requested_date: string | null;
   availability_start: string | null;
   availability_end: string | null;
