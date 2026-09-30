@@ -94,7 +94,10 @@ export type BookingView = {
   appointment_id: string | null;
   payment_status: PaymentStatus | null;
   technician: MatchedTechnician | null;
+  alternatives: AlternativeSlot[];
 };
+
+export type AlternativeSlot = { date: string; start: string; end: string };
 
 export type CustomerBookings = {
   upcoming: Array<{
@@ -118,5 +121,6 @@ export type CustomerBookings = {
     service_name: string | null;
     created_at: string;
     requested_date: string | null;
+    has_technician: boolean;
   }>;
 };
