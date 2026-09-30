@@ -17,6 +17,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedTechnicianRouteImport } from './routes/_authenticated/technician'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedAdminCustomersRouteImport } from './routes/_authenticated/admin.customers'
 import { Route as AuthenticatedAdminTechniciansRouteImport } from './routes/_authenticated/admin.technicians'
 import { Route as AuthenticatedTechnicianIndexRouteImport } from './routes/_authenticated/technician.index'
 import { Route as AuthenticatedTechnicianDashboardRouteImport } from './routes/_authenticated/technician.dashboard'
@@ -61,6 +62,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminCustomersRoute =
+  AuthenticatedAdminCustomersRouteImport.update({
+    id: '/customers',
+    path: '/customers',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminTechniciansRoute =
   AuthenticatedAdminTechniciansRouteImport.update({
     id: '/technicians',
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/technician': typeof AuthenticatedTechnicianRouteWithChildren
+  '/admin/customers': typeof AuthenticatedAdminCustomersRoute
   '/admin/technicians': typeof AuthenticatedAdminTechniciansRoute
   '/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
   '/technician/profile': typeof AuthenticatedTechnicianProfileRoute
@@ -104,6 +112,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/admin/customers': typeof AuthenticatedAdminCustomersRoute
   '/admin/technicians': typeof AuthenticatedAdminTechniciansRoute
   '/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
   '/technician/profile': typeof AuthenticatedTechnicianProfileRoute
@@ -119,6 +128,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/technician': typeof AuthenticatedTechnicianRouteWithChildren
+  '/_authenticated/admin/customers': typeof AuthenticatedAdminCustomersRoute
   '/_authenticated/admin/technicians': typeof AuthenticatedAdminTechniciansRoute
   '/_authenticated/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
   '/_authenticated/technician/profile': typeof AuthenticatedTechnicianProfileRoute
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/technician'
+    | '/admin/customers'
     | '/admin/technicians'
     | '/technician/dashboard'
     | '/technician/profile'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/dashboard'
+    | '/admin/customers'
     | '/admin/technicians'
     | '/technician/dashboard'
     | '/technician/profile'
@@ -159,6 +171,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/technician'
+    | '/_authenticated/admin/customers'
     | '/_authenticated/admin/technicians'
     | '/_authenticated/technician/dashboard'
     | '/_authenticated/technician/profile'
@@ -231,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/customers': {
+      id: '/_authenticated/admin/customers'
+      path: '/customers'
+      fullPath: '/admin/customers'
+      preLoaderRoute: typeof AuthenticatedAdminCustomersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/technicians': {
       id: '/_authenticated/admin/technicians'
       path: '/technicians'
@@ -263,11 +283,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminCustomersRoute: typeof AuthenticatedAdminCustomersRoute
   AuthenticatedAdminTechniciansRoute: typeof AuthenticatedAdminTechniciansRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminCustomersRoute: AuthenticatedAdminCustomersRoute,
   AuthenticatedAdminTechniciansRoute: AuthenticatedAdminTechniciansRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
