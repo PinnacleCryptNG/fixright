@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const searchSchema = z.object({
   role: z.enum(["customer", "technician"]).catch("customer"),
+  redirect: z.string().regex(/^\/[a-z0-9/_-]*$/i).optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/sign-up")({
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/sign-up")({
 });
 
 function SignUpPage() {
-  const { role } = Route.useSearch();
+  const { role, redirect } = Route.useSearch();
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-surface px-5 py-14">
@@ -41,8 +42,8 @@ function SignUpPage() {
       </p>
       <SignUp
         routing="hash"
-        signInUrl="/sign-in"
-        forceRedirectUrl={role === "technician" ? "/technician" : "/dashboard"}
+        signInUrl={redirect ? `/sign-in?redirect=${encodeURIComponent(redirect)}` : "/sign-in"}
+        forceRedirectUrl={role === "technician" ? "/technician" : (redirect ?? "/dashboard")}
         unsafeMetadata={{ desiredRole: role }}
       />
     </div>

@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect } from "react";
 
@@ -15,12 +15,13 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
   const { isLoaded, isSignedIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      navigate({ to: "/sign-in", replace: true });
+      navigate({ to: "/sign-in", search: { redirect: location.pathname }, replace: true });
     }
-  }, [isLoaded, isSignedIn, navigate]);
+  }, [isLoaded, isSignedIn, navigate, location.pathname]);
 
   if (!isLoaded || !isSignedIn) {
     return (

@@ -58,7 +58,7 @@ export function SiteHeader() {
           </SignedIn>
           <SignedOut>
             <Button asChild size="sm">
-              <Link to="/sign-up" search={{ role: "customer" }}>
+              <Link to="/book">
                 Find a Technician
               </Link>
             </Button>
