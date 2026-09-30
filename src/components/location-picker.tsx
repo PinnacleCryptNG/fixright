@@ -225,9 +225,20 @@ function MapLocation({ token, value, onConfirm, onFail }: { token: string; value
             </Button>
           </div>
         ) : (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-            {resolved.state === null ? (resolved.nigeria ? MSG.noLga : MSG.notNigeria) : MSG.noLga}
-          </p>
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+            <p>{resolved.state === null ? (resolved.nigeria ? MSG.noLga : MSG.notNigeria) : MSG.noLga}</p>
+            {resolved.state ? (
+              // The map knows the state but not the LGA (common in Lagos): the customer chooses it — we never guess.
+              <label className="mt-3 block">
+                <span className="text-muted-foreground">Or choose your local government area in {stateLabel(resolved.state)}:</span>
+                <select className={`${inputCls} mt-1.5`} defaultValue=""
+                  onChange={(e) => e.target.value && setResolved({ ...resolved, lga: e.target.value })}>
+                  <option value="">Local government area</option>
+                  {lgasForState(resolved.state).map((l) => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </label>
+            ) : null}
+          </div>
         )
       ) : null}
     </div>
