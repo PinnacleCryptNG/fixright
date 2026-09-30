@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { homeForRole, RoleRedirect } from "@/components/role-redirect";
+import { useAppUser } from "@/hooks/use-app-user";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Button } from "@/components/ui/button";
@@ -78,9 +80,18 @@ const trust = [
 
 function Landing() {
   const { services, technicians } = Route.useLoaderData();
+  const { isLoaded, isSignedIn, role, isPending } = useAppUser();
+  // Signed-in users go straight to their own area; wait for Clerk and the role first.
+  if (isLoaded && isSignedIn && !isPending) return <RoleRedirect to={homeForRole(role)} />;
+  const checking = !isLoaded || (isSignedIn && isPending);
 
   return (
     <div className="flex min-h-screen flex-col">
+      {checking ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        </div>
+      ) : null}
       <SiteHeader />
 
       <main className="flex-1">
