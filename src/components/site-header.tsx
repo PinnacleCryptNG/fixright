@@ -3,6 +3,8 @@ import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 import { Menu, Wrench } from "lucide-react";
 import { useState } from "react";
 
+import { homeForRole } from "@/components/role-redirect";
+import { useAppUser } from "@/hooks/use-app-user";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +15,8 @@ const publicLinks = [
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const { role } = useAppUser();
+  const dashboardHref = homeForRole(role);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
@@ -52,7 +56,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <SignedIn>
             <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
-              <Link to="/dashboard">My dashboard</Link>
+              <Link to={dashboardHref}>My dashboard</Link>
             </Button>
             <UserButton />
           </SignedIn>
@@ -111,7 +115,7 @@ export function SiteHeader() {
           </SignedOut>
           <SignedIn>
             <Link
-              to="/dashboard"
+              to={dashboardHref}
               onClick={() => setOpen(false)}
               className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
             >

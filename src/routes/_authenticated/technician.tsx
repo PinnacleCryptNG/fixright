@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import type React from "react";
 
 import { DashboardShell } from "@/components/dashboard-shell";
+import { RoleRedirect, RouteLoading } from "@/components/role-redirect";
 import { useAppUser } from "@/hooks/use-app-user";
 import { RequestNotifier, useOpenOffers } from "@/components/technician/request-notifications";
 
@@ -36,6 +37,8 @@ function TechnicianLayout() {
       </OffersBadgeShell>
     );
   }
+  if (isPending) return <RouteLoading />;
+  if (role === "customer") return <RoleRedirect to="/dashboard" />;
   return (
     <DashboardShell
       area="Technician"

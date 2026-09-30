@@ -7,6 +7,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { PageHeader } from "@/components/page-header";
 import { ServiceIcon } from "@/components/service-icon";
 import { Button } from "@/components/ui/button";
+import { RoleRedirect, RouteLoading } from "@/components/role-redirect";
 import { useAppUser } from "@/hooks/use-app-user";
 import { SERVICE_FEE_NOTE } from "@/lib/config";
 import { formatNaira, formatSlot } from "@/lib/format";
@@ -44,6 +45,9 @@ function CustomerDashboard() {
     queryFn: () => fetchBookings(),
   });
 
+  if (isPending) return <RouteLoading />;
+  if (role === "technician") return <RoleRedirect to="/technician" />;
+
   return (
     <DashboardShell area="Customer" navItems={[{ label: "Overview", linkProps: { to: "/dashboard" } }]}>
       <PageHeader
@@ -55,12 +59,6 @@ function CustomerDashboard() {
         description="Your repair requests and appointments."
       />
 
-      {role === "technician" ? (
-        <div className="mb-6 rounded-lg border border-border bg-primary-soft p-4 text-sm text-accent-foreground">
-          Your account is registered as a technician.{" "}
-          <Link to="/technician" className="font-medium underline">Go to your technician area</Link>.
-        </div>
-      ) : null}
 
       <div className="grid gap-6">
         <section>
