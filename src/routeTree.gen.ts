@@ -16,6 +16,7 @@ import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedTechnicianRouteImport } from './routes/_authenticated/technician'
 import { Route as AuthenticatedTechnicianIndexRouteImport } from './routes/_authenticated/technician.index'
+import { Route as AuthenticatedTechnicianDashboardRouteImport } from './routes/_authenticated/technician.dashboard'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,12 @@ const AuthenticatedTechnicianIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedTechnicianRoute,
   } as any)
+const AuthenticatedTechnicianDashboardRoute =
+  AuthenticatedTechnicianDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedTechnicianRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof SignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/technician': typeof AuthenticatedTechnicianRouteWithChildren
+  '/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
   '/technician/': typeof AuthenticatedTechnicianIndexRoute
 }
 export interface FileRoutesByTo {
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
   '/technician': typeof AuthenticatedTechnicianIndexRoute
 }
 export interface FileRoutesById {
@@ -76,6 +85,7 @@ export interface FileRoutesById {
   '/sign-up': typeof SignUpRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/technician': typeof AuthenticatedTechnicianRouteWithChildren
+  '/_authenticated/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
   '/_authenticated/technician/': typeof AuthenticatedTechnicianIndexRoute
 }
 export interface FileRouteTypes {
@@ -86,9 +96,16 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/dashboard'
     | '/technician'
+    | '/technician/dashboard'
     | '/technician/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sign-in' | '/sign-up' | '/dashboard' | '/technician'
+  to:
+    | '/'
+    | '/sign-in'
+    | '/sign-up'
+    | '/dashboard'
+    | '/technician/dashboard'
+    | '/technician'
   id:
     | '__root__'
     | '/'
@@ -97,6 +114,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/_authenticated/dashboard'
     | '/_authenticated/technician'
+    | '/_authenticated/technician/dashboard'
     | '/_authenticated/technician/'
   fileRoutesById: FileRoutesById
 }
@@ -158,15 +176,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTechnicianIndexRouteImport
       parentRoute: typeof AuthenticatedTechnicianRoute
     }
+    '/_authenticated/technician/dashboard': {
+      id: '/_authenticated/technician/dashboard'
+      path: '/dashboard'
+      fullPath: '/technician/dashboard'
+      preLoaderRoute: typeof AuthenticatedTechnicianDashboardRouteImport
+      parentRoute: typeof AuthenticatedTechnicianRoute
+    }
   }
 }
 
 interface AuthenticatedTechnicianRouteChildren {
+  AuthenticatedTechnicianDashboardRoute: typeof AuthenticatedTechnicianDashboardRoute
   AuthenticatedTechnicianIndexRoute: typeof AuthenticatedTechnicianIndexRoute
 }
 
 const AuthenticatedTechnicianRouteChildren: AuthenticatedTechnicianRouteChildren =
   {
+    AuthenticatedTechnicianDashboardRoute:
+      AuthenticatedTechnicianDashboardRoute,
     AuthenticatedTechnicianIndexRoute: AuthenticatedTechnicianIndexRoute,
   }
 
