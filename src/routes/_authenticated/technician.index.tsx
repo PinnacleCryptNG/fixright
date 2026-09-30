@@ -2,8 +2,7 @@ import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 
 import { PageHeader } from "@/components/page-header";
 import { TechProfileForm } from "@/components/technician/profile-form";
-import { NotVerifiedNotice } from "@/components/technician/tech-ui";
-import { useTechProfile } from "@/components/technician/tech-ui";
+import { NotVerifiedNotice, useTechProfile } from "@/components/technician/tech-ui";
 
 export const Route = createFileRoute("/_authenticated/technician/")({
   head: () => ({
