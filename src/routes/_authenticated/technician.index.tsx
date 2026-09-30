@@ -2,6 +2,7 @@ import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 
 import { PageHeader } from "@/components/page-header";
 import { TechProfileForm } from "@/components/technician/profile-form";
+import { NotVerifiedNotice } from "@/components/technician/tech-ui";
 import { useTechProfile } from "@/components/technician/tech-ui";
 
 export const Route = createFileRoute("/_authenticated/technician/")({
@@ -25,6 +26,7 @@ function TechnicianOnboarding() {
         title="Set up your technician profile"
         description="Tell customers what you repair, where you work and when you're free. New profiles are reviewed by FixRight before they receive requests."
       />
+      <div className="mb-6"><NotVerifiedNotice status={profile.verification_status} /></div>
       <TechProfileForm profile={profile} submitLabel="Finish setup" onSaved={() => navigate({ to: "/technician/dashboard" })} />
     </>
   );
