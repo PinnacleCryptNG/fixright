@@ -63,10 +63,7 @@ function RequestDetail() {
             <Block label="Problem"><p className="leading-relaxed">“{o.problem_description}”</p></Block>
             <Block label="Location">
               <p className="flex items-center gap-2 font-medium"><MapPin className="h-4 w-4 text-primary" />{o.area_name}</p>
-              <p className="mt-1 text-muted-foreground">{o.address}{o.landmark ? ` · near ${o.landmark}` : ""}</p>
-              {o.latitude != null && o.longitude != null ? (
-                <p className="mt-2 text-xs text-muted-foreground">Pinned location saved · map view comes later.</p>
-              ) : null}
+              <p className="mt-1 text-muted-foreground">{o.address}{o.landmark ? ` · ${o.landmark}` : ""}</p>
             </Block>
             <Block label="Customer availability">
               {formatSlot(o.requested_date)} · {formatTime(o.availability_start)} – {formatTime(o.availability_end)}
