@@ -89,7 +89,8 @@ function CustomerDashboard() {
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{a.address}, {a.area_name}</p>
                   </div>
                   <p className="mt-3 text-xs text-muted-foreground">
-                    Service call {formatNaira(a.service_fee)} · Payment pending (demo — nothing charged)
+                    Service call {formatNaira(a.service_fee)} ·{" "}
+                    {a.payment_status === "paid" ? "Paid · Demo" : "Not paid"}
                   </p>
                 </div>
               ))}
@@ -111,9 +112,16 @@ function CustomerDashboard() {
                     <p className="text-sm font-medium">{r.service_name}</p>
                     <p className="truncate text-sm text-muted-foreground">{r.problem_description}</p>
                   </div>
-                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs">
-                    {statusLabel[r.status] ?? r.status}
-                  </span>
+                  {r.status === "matching" && !r.has_technician ? (
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <span className="rounded-full border border-border px-2 py-0.5 text-xs">No technician found</span>
+                      <Link to="/book" className="text-xs font-medium text-primary hover:underline">Try again</Link>
+                    </div>
+                  ) : (
+                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs">
+                      {statusLabel[r.status] ?? r.status}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

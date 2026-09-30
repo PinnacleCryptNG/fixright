@@ -13,6 +13,7 @@ export type RepairRequestStatus =
 
 export type AppointmentStatus =
   | "scheduled"
+  | "confirmed"
   | "in_progress"
   | "completed"
   | "cancelled"
