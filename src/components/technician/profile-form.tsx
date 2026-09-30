@@ -97,9 +97,9 @@ export function TechProfileForm({ profile, submitLabel, onSaved }: { profile: Te
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!f.serviceIds.length) return toast.error("Choose at least one service you repair.");
-    if (!f.areas.length) return toast.error("Choose at least one area you cover.");
-    if (f.workEnd <= f.workStart) return toast.error("Working hours must end after they start.");
+    if (!f.serviceIds.length) { toast.error("Choose at least one service you repair."); return; }
+    if (!f.areas.length) { toast.error("Choose at least one area you cover."); return; }
+    if (f.workEnd <= f.workStart) { toast.error("Working hours must end after they start."); return; }
     m.mutate();
   }
 
