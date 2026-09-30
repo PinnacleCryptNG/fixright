@@ -50,7 +50,7 @@ export function lgasForState(state: string): readonly string[] {
 
 const norm = (s: string) => s.toLowerCase().replace(/\b(state|local government area|lga)\b/g, "").replace(/[^a-z]/g, "");
 
-/** Maps a free-form state name (e.g. from Google, "Kaduna State", "Abuja") to a canonical state. */
+/** Maps a free-form state name (e.g. from Mapbox, "Kaduna State", "Abuja") to a canonical state. */
 export function matchState(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const n = norm(raw);
