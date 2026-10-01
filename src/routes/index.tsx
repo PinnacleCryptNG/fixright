@@ -20,9 +20,11 @@ import { TechnicianGrid, TechnicianPortrait } from "@/components/technician/tech
 import { listServices, listTechnicians } from "@/lib/fixright.functions";
 import type { TechnicianCard } from "@/lib/types";
 
-const TITLE = "FixRight — Something broken? We'll find someone who can fix it.";
-const DESC =
+const TITLE = "FixRight — Find someone who can fix it.";
+const HERO_COPY =
   "Tell us what needs fixing, share your location, and we'll connect you with an available technician who covers your area.";
+const DESC =
+  "FixRight connects you with verified technicians who cover your area. Tell us what needs fixing, choose when you're available, and book the repair.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -156,7 +158,7 @@ function Landing() {
                 <br />
                 We'll find someone who can fix it.
               </h1>
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">{DESC}</p>
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">{HERO_COPY}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
                 <Button asChild size="lg" className="h-12 px-6 text-base">
                   <Link to="/book">Find a Technician</Link>
