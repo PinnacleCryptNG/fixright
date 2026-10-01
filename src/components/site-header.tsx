@@ -1,11 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { clerkAppearance, useIsDark } from "@/components/theme";
 import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 import { LayoutDashboard, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { homeForRole } from "@/components/role-redirect";
-import { ThemeToggle } from "@/components/theme";
+import { clerkAppearance, ThemeToggle, useIsDark } from "@/components/theme";
 import { useAppUser } from "@/hooks/use-app-user";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +29,7 @@ const ctaClass =
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const isDark = useIsDark();
   const { role } = useAppUser();
   const dashboardHref = homeForRole(role);
   const close = () => setOpen(false);
