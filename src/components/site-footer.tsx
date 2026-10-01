@@ -75,8 +75,8 @@ export function SiteFooter() {
                   <li key={link.label}>
                     <Link
                       to={link.to}
-                      hash={link.hash}
-                      search={link.search}
+                      {...(link.hash ? { hash: link.hash } : {})}
+              {...(link.search ? { search: link.search } : {})}
                       className="text-[15px] text-ink-foreground/85 transition-colors duration-200 hover:text-ink-foreground"
                     >
                       {link.label}

@@ -49,11 +49,11 @@ export function SiteHeader() {
             <Link
               key={link.label}
               to={link.to}
-              hash={link.hash}
-              search={link.search}
+              {...(link.hash ? { hash: link.hash } : {})}
+              {...(link.search ? { search: link.search } : {})}
               className={linkBase}
               activeOptions={{ exact: true, includeHash: true }}
-              activeProps={link.to === "/about" ? { className: "text-primary" } : undefined}
+              activeProps={{ className: link.to === "/about" ? "text-primary" : "" }}
             >
               {link.label}
             </Link>
@@ -103,8 +103,8 @@ export function SiteHeader() {
             <Link
               key={link.label}
               to={link.to}
-              hash={link.hash}
-              search={link.search}
+              {...(link.hash ? { hash: link.hash } : {})}
+              {...(link.search ? { search: link.search } : {})}
               onClick={close}
               className="rounded-md px-2 py-3.5 text-base font-medium text-foreground transition-colors duration-200 hover:bg-muted"
             >
