@@ -29,3 +29,4 @@
 - Technician coverage is one state, either `covers_entire_state` or specific LGAs in `technician_service_areas`; there is no travel radius or distance matching.
 - Customer location comes from Mapbox (GL JS + Geocoding v6, country=NG, pk token served by `getMapsConfig` from MAPBOX_PUBLIC_TOKEN) in `src/components/location-picker.tsx`, which reverse-geocodes State + LGA; an uncertain LGA is never guessed, and a manual State/LGA fallback is shown only if the map can't load.
 - Technician profile photos upload through Clerk (`user.setProfileImage`), and the resulting URL is stored in `users.avatar_url`; there is no separate image hosting.
+- Theme is a `.dark` class on <html> set before paint by `themeInitScript` (src/components/theme.tsx), persisted in localStorage; all colours are tokens in src/styles.css so both themes stay consistent.
