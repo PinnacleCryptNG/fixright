@@ -2,7 +2,6 @@ import { Link, type LinkProps } from "@tanstack/react-router";
 import { Logo } from "@/components/logo";
 import { clerkAppearance, ThemeToggle, useIsDark } from "@/components/theme";
 import { UserButton } from "@clerk/clerk-react";
-import { Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
 export type ShellNavItem = {
