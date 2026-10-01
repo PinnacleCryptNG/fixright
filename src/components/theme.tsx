@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import { dark as clerkDark } from "@clerk/themes";
-
 import { cn } from "@/lib/utils";
 
 export type Theme = "light" | "dark";
@@ -120,10 +118,9 @@ export function useIsDark() {
 }
 
 /** Clerk widget styling matched to the FixRight palette for the active theme. */
-export function clerkAppearance(isDark: boolean) {
+export function clerkAppearance(isDark: boolean): { variables: Record<string, string> } {
   return isDark
     ? {
-        baseTheme: clerkDark,
         variables: {
           colorPrimary: "#4faf8d",
           colorBackground: "#17211d",
@@ -131,6 +128,8 @@ export function clerkAppearance(isDark: boolean) {
           colorTextSecondary: "#a6aea9",
           colorInputBackground: "#101713",
           colorInputText: "#f4f5f1",
+          colorNeutral: "#f4f5f1",
+          colorShimmer: "rgba(255,255,255,0.06)",
           fontFamily: "DM Sans, sans-serif",
         },
       }
