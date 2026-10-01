@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type ReactNode } from "react";
 import { z } from "zod";
-import { ArrowLeft, BadgeCheck, CalendarDays, Check, CreditCard, MapPin, Star, Wrench } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarDays, Check, MapPin, Star, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -693,7 +693,8 @@ function BookedView({ booking }: { booking: BookingView }) {
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
         <Check className="h-6 w-6" />
       </span>
-      <h1 className="mt-5 text-4xl sm:text-5xl">You're booked.</h1>
+      <h1 className="mt-5 text-4xl sm:text-5xl">Payment confirmed.</h1>
+      <p className="mt-2 text-lg text-muted-foreground">Your repair visit is booked.</p>
       <dl className="mt-6 divide-y divide-border rounded-lg border border-border bg-card shadow-card">
         <ReviewRow label="Technician">{booking.technician?.full_name}</ReviewRow>
         <ReviewRow label="Repair">{booking.service_name} repair</ReviewRow>
