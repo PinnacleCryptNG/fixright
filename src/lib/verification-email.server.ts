@@ -62,7 +62,7 @@ export async function sendVerificationEmail(technicianId: string, decision: Deci
       console.error("[verification-email] email provider not configured");
       return;
     }
-    const from = process.env["FIXRIGHT_EMAIL_FROM"] ?? "FixRight <onboarding@resend.dev>";
+    const from = process.env["FIXRIGHT_EMAIL_FROM"] ?? "FixRight <noreply@fixright.online>";
     const res = await fetch(`${GATEWAY_URL}/emails`, {
       method: "POST",
       headers: {
