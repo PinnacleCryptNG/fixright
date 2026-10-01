@@ -47,7 +47,7 @@ const requestSelect = (sql: ReturnType<typeof getSql>, requestId: string, custom
          to_char(r.proposed_end, 'HH24:MI') as proposed_end,
          r.matched_technician_id, s.id as service_id, s.name as service_name,
          s.base_service_fee as service_fee,
-         ap.id as appointment_id, ap.payment_status
+         ap.id as appointment_id, ap.payment_status, r.paystack_reference as payment_reference
   from repair_requests r
   left join services s on s.id = r.service_id
   left join appointments ap on ap.repair_request_id = r.id and ap.status <> 'cancelled'
