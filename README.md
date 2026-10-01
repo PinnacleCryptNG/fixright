@@ -1,69 +1,79 @@
 # FixRight
 
-### Something broken? We'll find someone who can fix it.
+> **Something broken? We’ll find someone who can fix it.**
 
-FixRight is a repair-booking marketplace that connects customers with available technicians who actually cover their area.
+FixRight is a repair-booking marketplace that connects customers with available, verified technicians who cover their area.
 
-Instead of searching through directories, calling multiple technicians, explaining the same problem repeatedly, and hoping someone is available, FixRight turns the process into a simple flow:
+Instead of browsing a huge directory and calling technicians one by one, customers describe what is broken, share where they are, choose when they are available, and FixRight handles the matching and booking flow.
 
-**Tell us what's broken → Share your location → Choose your time → Get matched → Pay → Get it fixed.**
-
-Built for the **Lovable Challenge**.
+**Product loop:** Find → Match → Book → Pay → Fix → Review
 
 ---
 
 ## The Problem
 
-Finding someone to repair a broken appliance or device is often harder than the repair itself.
+When something breaks, finding someone reliable to fix it can be harder than the repair itself.
 
-Customers typically have to:
+Customers often have to:
 
-- Search for technicians manually
-- Call multiple people before finding someone available
-- Explain their problem repeatedly
-- Figure out whether a technician serves their area
-- Coordinate availability
-- Coordinate payment
-- Keep track of who is actually coming
+- Search through random listings
+- Call multiple technicians
+- Explain the same problem repeatedly
+- Ask whether someone covers their area
+- Negotiate availability
+- Wonder whether the technician is legitimate
+- Arrange payment before knowing whether anyone is actually coming
 
-At the same time, independent technicians need a better way to receive relevant repair requests without constantly searching for customers.
-
-FixRight brings both sides into one workflow.
+FixRight turns that fragmented process into one guided booking experience.
 
 ---
 
 ## The Solution
 
-FixRight matches customers with technicians based on:
+FixRight asks the customer four simple questions:
 
-- The service they need
-- The state they are located in
-- The LGA/area they need service in
-- Technician availability
-- Technician verification status
+1. **What needs fixing?**
+2. **Where is it?**
+3. **When are you available?**
+4. **Confirm the technician and booking**
 
-The customer does not need to browse a huge technician directory.
+The system then matches the request against verified technicians who:
 
-They simply describe the problem, provide their location and availability, and FixRight finds an eligible technician.
+- Offer the requested service
+- Are currently available
+- Cover the customer's state/LGA
+- Are eligible to receive new requests
 
-### Customer flow
+The customer does not need to browse a directory or manually compare technicians.
+
+---
+
+## Customer Flow
 
 ```text
-Something is broken
-        ↓
-Tell FixRight what needs fixing
-        ↓
-Share your location
-        ↓
-Choose your time
-        ↓
-FixRight finds an eligible technician
-        ↓
+Customer
+   │
+   ▼
+What needs fixing?
+   │
+   ▼
+Share location
+   │
+   ▼
+Choose availability
+   │
+   ▼
+FixRight matches eligible technicians
+   │
+   ▼
 Technician accepts
-        ↓
-Pay ₦1,000 service-call fee
-        ↓
+   │
+   ▼
+Customer pays ₦1,000 service-call fee
+   │
+   ▼
 Appointment confirmed
-        ↓
+   │
+   ▼
 Technician completes the job
 ```
