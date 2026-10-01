@@ -1,29 +1,69 @@
-# Welcome to your Lovable project
+# FixRight
 
-This project was built with [Lovable](https://lovable.dev).
+### Something broken? We'll find someone who can fix it.
 
-## Build with Lovable
+FixRight is a repair-booking marketplace that connects customers with available technicians who actually cover their area.
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Instead of searching through directories, calling multiple technicians, explaining the same problem repeatedly, and hoping someone is available, FixRight turns the process into a simple flow:
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+**Tell us what's broken → Share your location → Choose your time → Get matched → Pay → Get it fixed.**
 
-## Development
+Built for the **Lovable Challenge**.
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+---
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+## The Problem
+
+Finding someone to repair a broken appliance or device is often harder than the repair itself.
+
+Customers typically have to:
+
+- Search for technicians manually
+- Call multiple people before finding someone available
+- Explain their problem repeatedly
+- Figure out whether a technician serves their area
+- Coordinate availability
+- Coordinate payment
+- Keep track of who is actually coming
+
+At the same time, independent technicians need a better way to receive relevant repair requests without constantly searching for customers.
+
+FixRight brings both sides into one workflow.
+
+---
+
+## The Solution
+
+FixRight matches customers with technicians based on:
+
+- The service they need
+- The state they are located in
+- The LGA/area they need service in
+- Technician availability
+- Technician verification status
+
+The customer does not need to browse a huge technician directory.
+
+They simply describe the problem, provide their location and availability, and FixRight finds an eligible technician.
+
+### Customer flow
+
+```text
+Something is broken
+        ↓
+Tell FixRight what needs fixing
+        ↓
+Share your location
+        ↓
+Choose your time
+        ↓
+FixRight finds an eligible technician
+        ↓
+Technician accepts
+        ↓
+Pay ₦1,000 service-call fee
+        ↓
+Appointment confirmed
+        ↓
+Technician completes the job
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
