@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { homeForRole } from "@/components/role-redirect";
 import { clerkAppearance, ThemeToggle, useIsDark } from "@/components/theme";
 import { useAppUser } from "@/hooks/use-app-user";
+import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 type NavLink = {
@@ -52,10 +53,10 @@ export function SiteHeader() {
         <Link
           to="/"
           onClick={close}
-          className="text-[1.5rem] font-bold tracking-[-0.035em] text-foreground"
+          className="shrink-0 text-[1.5rem]"
           aria-label="FixRight home"
         >
-          Fix<span className="text-primary">Right</span>
+          <Logo />
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-5 lg:flex lg:gap-8">

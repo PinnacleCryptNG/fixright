@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { Logo } from "@/components/logo";
 
 type FooterLink = {
   label: string;
@@ -47,7 +48,7 @@ export function SiteFooter() {
       <div className="container-page py-16 sm:py-20">
         <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xl font-bold tracking-tight">FixRight</p>
+            <Logo onInk className="text-2xl" />
             <p className="mt-6 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
               Something broken?
               <br />

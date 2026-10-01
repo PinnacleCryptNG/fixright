@@ -26,6 +26,7 @@
   --color-ink: var(--ink);
   --color-ink-foreground: var(--ink-foreground);
   --color-ink-muted: var(--ink-muted);
+  --color-ink-brand: var(--ink-brand);
   --color-primary-deep: var(--primary-deep);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -90,6 +91,7 @@
   --ink: #17211d;
   --ink-foreground: #ffffff;
   --ink-muted: #a9b0ab;
+  --ink-brand: #4faf8d;
 
   --primary: #176b52;
   --primary-deep: #0f4d3b;
