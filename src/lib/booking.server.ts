@@ -207,44 +207,130 @@ export async function getBooking(user: AppUser, requestId: string) {
   return loadBooking(requestId, user.id);
 }
 
-/**
- * Demo payment + confirmation. Only reachable after a technician was matched
- * (status technician_pending). Payment is simulated: it is recorded as paid and
- * the appointment is created confirmed in the same step — never before.
- */
-export async function confirmBooking(user: AppUser, requestId: string): Promise<BookingView> {
+type PayableRequest = {
+  status: string;
+  matched_technician_id: string | null;
+  service_id: string;
+  d: string;
+  s: string;
+  e: string;
+  fee: string;
+  paystack_reference: string | null;
+  email: string;
+};
+
+async function loadPayableRequest(requestId: string, customerId: string): Promise<PayableRequest> {
   const sql = getSql();
   const rows = (await sql`
-    select r.status, r.matched_technician_id, r.service_id,
+    select r.status, r.matched_technician_id, r.service_id, r.paystack_reference,
+           to_char(r.proposed_date, 'YYYY-MM-DD') as d,
+           to_char(r.proposed_start, 'HH24:MI') as s, to_char(r.proposed_end, 'HH24:MI') as e,
+           s.base_service_fee as fee, u.email
+    from repair_requests r
+    left join services s on s.id = r.service_id
+    join users u on u.id = r.customer_id
+    where r.id = ${requestId} and r.customer_id = ${customerId}
+  `) as PayableRequest[];
+  const r = rows[0];
+  if (!r) throw new Response("Not found", { status: 404 });
+  return r;
+}
+
+/**
+ * Starts a real Paystack payment for the service-call fee. Only reachable after
+ * a technician accepted (status technician_pending). The amount is decided
+ * here on the server from the service record — never taken from the client.
+ */
+export async function initializePayment(
+  user: AppUser,
+  requestId: string,
+  callbackUrl: string,
+): Promise<{ authorizationUrl: string; reference: string }> {
+  const sql = getSql();
+  const r = await loadPayableRequest(requestId, user.id);
+  if (r.status === "confirmed") throw new Error("This booking is already confirmed and paid.");
+  if (r.status === "cancelled") throw new Error("This request has been cancelled.");
+  if (r.status !== "technician_pending" || !r.matched_technician_id) {
+    throw new Error("Payment is only available after a technician has accepted your request.");
+  }
+
+  const amountKobo = Math.round(Number(r.fee ?? 1000) * 100);
+  const reference = `frq_${requestId.replace(/-/g, "").slice(0, 12)}_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
+
+  const { initializeTransaction } = await import("./paystack.server");
+  const tx = await initializeTransaction({ email: r.email, amountKobo, reference, callbackUrl });
+
+  await sql`update repair_requests set paystack_reference = ${reference}, updated_at = now()
+            where id = ${requestId} and status = 'technician_pending'`;
+  return { authorizationUrl: tx.authorizationUrl, reference };
+}
+
+/**
+ * Creates the confirmed appointment exactly once, after a payment has been
+ * verified server-side. Safe to call repeatedly (webhook + customer return):
+ * the partial unique index on appointments makes duplicates impossible.
+ */
+async function markPaidAndConfirm(requestId: string): Promise<void> {
+  const sql = getSql();
+  const rows = (await sql`
+    select r.customer_id, r.matched_technician_id, r.service_id, r.status,
            to_char(r.proposed_date, 'YYYY-MM-DD') as d,
            to_char(r.proposed_start, 'HH24:MI') as s, to_char(r.proposed_end, 'HH24:MI') as e,
            s.base_service_fee as fee
     from repair_requests r left join services s on s.id = r.service_id
-    where r.id = ${requestId} and r.customer_id = ${user.id}
-  `) as Array<{ status: string; matched_technician_id: string | null; service_id: string; d: string; s: string; e: string; fee: string }>;
+    where r.id = ${requestId}
+  `) as Array<{ customer_id: string; matched_technician_id: string | null; service_id: string; status: string; d: string; s: string; e: string; fee: string }>;
   const r = rows[0];
-  if (!r) throw new Response("Not found", { status: 404 });
-  if (r.status === "confirmed") return loadBooking(requestId, user.id);
-  if (r.status !== "technician_pending" || !r.matched_technician_id) {
-    throw new Error("This request has no technician waiting for confirmation.");
-  }
-
-  if (!(await isSlotStillFree(r.matched_technician_id, r.d, r.s, r.e, requestId))) {
-    // Slot was taken meanwhile: look for another slot/technician instead of double-booking.
-    await sql`update repair_requests set status = 'matching', matched_technician_id = null,
-              proposed_date = null, proposed_start = null, proposed_end = null where id = ${requestId}`;
-    await dispatchRequest(requestId);
-    throw new Error("That time was just taken. We've found you a new proposal — please review it.");
-  }
+  if (!r || r.status === "cancelled" || !r.matched_technician_id) return;
 
   await sql`
     insert into appointments (repair_request_id, customer_id, technician_id, service_id,
       appointment_date, start_time, end_time, status, payment_status, service_fee)
-    values (${requestId}, ${user.id}, ${r.matched_technician_id}, ${r.service_id},
+    values (${requestId}, ${r.customer_id}, ${r.matched_technician_id}, ${r.service_id},
       ${r.d}, ${r.s}, ${r.e}, 'confirmed', 'paid', ${r.fee ?? 1000})
+    on conflict (repair_request_id) where status <> 'cancelled' do nothing
   `;
-  await sql`update repair_requests set status = 'confirmed', updated_at = now() where id = ${requestId}`;
+  await sql`update repair_requests set status = 'confirmed', paid_at = now(), updated_at = now()
+            where id = ${requestId} and status <> 'cancelled'`;
+}
+
+/** Verifies a payment with Paystack server-side, then confirms the booking. */
+export async function verifyAndConfirmPayment(user: AppUser, requestId: string, reference: string): Promise<BookingView> {
+  const r = await loadPayableRequest(requestId, user.id);
+  if (!r.paystack_reference || r.paystack_reference !== reference) {
+    throw new Error("This payment reference doesn't match this booking.");
+  }
+  if (r.status !== "confirmed") {
+    await verifyReferenceAgainstRequest(reference, requestId, Number(r.fee ?? 1000));
+    await markPaidAndConfirm(requestId);
+  }
   return loadBooking(requestId, user.id);
+}
+
+/** Webhook entry point: a verified charge.success event for a known reference. */
+export async function handleChargeSuccess(reference: string): Promise<void> {
+  const sql = getSql();
+  const rows = (await sql`
+    select r.id, r.status, s.base_service_fee as fee
+    from repair_requests r left join services s on s.id = r.service_id
+    where r.paystack_reference = ${reference}
+  `) as Array<{ id: string; status: string; fee: string }>;
+  const r = rows[0];
+  if (!r || r.status === "confirmed" || r.status === "cancelled") return;
+  await verifyReferenceAgainstRequest(reference, r.id, Number(r.fee ?? 1000));
+  await markPaidAndConfirm(r.id);
+}
+
+/** Double-checks with Paystack: success, exact amount in kobo, NGN currency. */
+async function verifyReferenceAgainstRequest(reference: string, _requestId: string, feeNaira: number): Promise<void> {
+  const { verifyTransaction } = await import("./paystack.server");
+  const tx = await verifyTransaction(reference);
+  if (tx.status !== "success") {
+    throw new Error("This payment wasn't completed. Your appointment is not confirmed yet.");
+  }
+  if (tx.currency !== "NGN" || tx.amount !== Math.round(feeNaira * 100)) {
+    throw new Error("The paid amount doesn't match the service-call fee. Please contact support.");
+  }
 }
 
 /** Customer chose "Change request": the unconfirmed request is cancelled. */
