@@ -143,7 +143,7 @@ function CustomerDashboard() {
               <p className="mt-1 text-sm text-muted-foreground">Tell us what's broken and we'll find someone who can help.</p>
               <Button asChild size="sm" className="mt-4"><Link to="/book">Book a Repair</Link></Button>
             </div>
-          )}
+          ))}
         </section>
 
         <div className="rounded-lg border border-border bg-card p-5 shadow-card">
