@@ -18,7 +18,8 @@ function AuthenticatedLayout() {
   const location = useLocation();
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
+    // Skip once navigation to sign-in has started, so the return address stays the original page.
+    if (isLoaded && !isSignedIn && !location.pathname.startsWith("/sign-")) {
       navigate({ to: "/sign-in", search: { redirect: location.pathname }, replace: true });
     }
   }, [isLoaded, isSignedIn, navigate, location.pathname]);
