@@ -98,8 +98,8 @@ function Landing() {
       <main className="flex-1">
         {/* Hero */}
         <section className="border-b border-border bg-surface">
-          <div className="container-page grid gap-12 py-16 sm:py-24 max-w-4xl">
-            <div className="rise-in">
+          <div className="container-page grid gap-12 py-16 sm:py-24">
+            <div className="rise-in max-w-3xl">
               <p className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5" /> Available across Nigeria
               </p>
