@@ -38,7 +38,28 @@ const attachClerkAuth = createMiddleware({ type: "function" }).client(async ({ n
   return next(token ? { headers: { Authorization: `Bearer ${token}` } } : {});
 });
 
+// Server functions: never let database errors, stack traces or validation
+// internals reach the browser. Intentional messages (plain Error) and HTTP
+// Responses (401/403/404) pass through; everything else becomes generic.
+const safeErrors = createMiddleware({ type: "function" }).server(async ({ next }) => {
+  try {
+    return await next();
+  } catch (error) {
+    if (error instanceof Response) throw error;
+    if (error != null && typeof error === "object" && ("isRedirect" in error || "isNotFound" in error)) throw error;
+    const e = error as { name?: string; severity?: unknown; code?: unknown; message?: string };
+    if (e?.name === "ZodError") throw new Error("Some details are missing or invalid. Please check and try again.");
+    const internal =
+      !(error instanceof Error) || e.name !== "Error" || e.severity !== undefined || e.code !== undefined;
+    if (internal) {
+      console.error(error);
+      throw new Error("Something went wrong on our side. Please try again.");
+    }
+    throw error;
+  }
+});
+
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware, csrfMiddleware],
-  functionMiddleware: [attachClerkAuth],
+  functionMiddleware: [attachClerkAuth, safeErrors],
 }));
