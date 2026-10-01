@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/technician/jobs")({
 });
 
 const LABEL: Record<string, string> = {
-  awaiting_payment: "Awaiting customer payment",
+  awaiting_payment: "Payment pending",
   scheduled: "Confirmed",
   confirmed: "Confirmed",
   on_the_way: "On the way",
@@ -68,7 +68,7 @@ function JobCard({ job }: { job: TechJob }) {
       </div>
       {job.problem_description ? <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">“{job.problem_description}”</p> : null}
       {action ? (
-        <Button className="mt-4" disabled={m.isPending} onClick={() => m.mutate()}>{action}</Button>
+        <Button className="mt-4" disabled={m.isPending} aria-busy={m.isPending} onClick={() => m.mutate()}>{m.isPending ? "Updating…" : action}</Button>
       ) : null}
     </div>
   );
