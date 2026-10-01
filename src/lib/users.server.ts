@@ -32,10 +32,11 @@ export async function syncAppUser({
   const initialRole: UserRole = isConfiguredAdmin(email) ? "admin" : (desiredRole ?? "customer");
 
   const rows = (await sql`
-    insert into users (clerk_user_id, email, full_name, avatar_url, role)
-    values (${identity.clerkUserId}, ${email}, ${fullName ?? null}, ${avatarUrl ?? null}, ${initialRole}::user_role)
+    insert into users (clerk_user_id, email, phone, full_name, avatar_url, role)
+    values (${identity.clerkUserId}, ${email}, ${identity.phone ?? null}, ${fullName ?? null}, ${avatarUrl ?? null}, ${initialRole}::user_role)
     on conflict (clerk_user_id) do update set
       email = coalesce(excluded.email, users.email),
+      phone = coalesce(users.phone, excluded.phone),
       full_name = coalesce(users.full_name, excluded.full_name),
       avatar_url = coalesce(users.avatar_url, excluded.avatar_url),
       updated_at = now()
