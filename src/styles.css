@@ -237,7 +237,7 @@
 /* Ambient background: soft, damped layers driven by --px/--py (-1..1) set from JS. */
 .ambient {
   position: fixed;
-  inset: -24px;
+  inset: 0;
   z-index: -1;
   pointer-events: none;
   overflow: hidden;
