@@ -29,7 +29,7 @@ function TechnicianRequests() {
           offers.data.map((o) => <OfferCard key={o.id} offer={o} />)
         ) : (
           <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-            No open requests right now.
+            No new repair requests. Requests that match your services, areas and hours will appear here as they come in.
           </div>
         )}
       </div>

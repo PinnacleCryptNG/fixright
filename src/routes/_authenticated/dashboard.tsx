@@ -97,7 +97,7 @@ function CustomerDashboard() {
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-              No upcoming appointments yet.
+              No confirmed visits yet. Once you pay the service call for an accepted request, it shows here.
             </div>
           )}
         </section>
@@ -119,7 +119,7 @@ function CustomerDashboard() {
                   ) : r.status === "technician_pending" ? (
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
                       <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs text-accent-foreground">Technician accepted — payment required</span>
-                      <Link to="/book" search={{ request: r.id }} className="text-xs font-medium text-primary hover:underline">Confirm &amp; pay</Link>
+                      <Link to="/book" search={{ request: r.id }} className="text-xs font-medium text-primary hover:underline">Pay ₦1,000</Link>
                     </div>
                   ) : r.status === "matching" && !r.has_technician ? (
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -135,7 +135,14 @@ function CustomerDashboard() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">{isLoading ? "Loading…" : "You haven't requested a repair yet."}</p>
+            isLoading ? (
+            <p className="text-sm text-muted-foreground" role="status">Loading your repairs…</p>
+          ) : (
+            <div className="rounded-lg border border-dashed border-border bg-card p-6">
+              <p className="font-semibold">Nothing needs fixing yet.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Tell us what's broken and we'll find someone who can help.</p>
+              <Button asChild size="sm" className="mt-4"><Link to="/book">Book a Repair</Link></Button>
+            </div>
           )}
         </section>
 
