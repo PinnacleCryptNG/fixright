@@ -19,3 +19,5 @@
 - Mapbox location picker (src/components/location-picker.tsx) reverse-geocodes State + LGA and never guesses an uncertain LGA.
 - Theme: `.dark` class on <html> set pre-paint by src/components/theme.tsx; all colours are tokens in src/styles.css.
 - Server/domain rules: see src/lib/AGENTS.md.
+- Every Paystack reference is recorded in `payment_attempts`; verify/webhook look references up there so no paid checkout is lost.
+- Server-fn errors pass through `safeErrors` (src/start.ts); throw plain `Error` only with customer-safe text.
