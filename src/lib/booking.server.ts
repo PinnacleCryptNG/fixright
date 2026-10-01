@@ -255,11 +255,28 @@ export async function initializePayment(
   }
 
   const amountKobo = Math.round(Number(r.fee ?? 1000) * 100);
+
+  // A previous checkout for this request may already have been paid (second
+  // tab, repeated Pay click). Confirm it instead of opening another charge.
+  const previous = (await sql`select reference from payment_attempts where repair_request_id = ${requestId}
+                              order by created_at desc limit 5`) as Array<{ reference: string }>;
+  for (const p of previous) {
+    try {
+      await verifyReferenceAgainstRequest(p.reference, requestId, Number(r.fee ?? 1000));
+      await markPaidAndConfirm(requestId);
+      throw new Error("This booking is already confirmed and paid.");
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith("This booking is already")) throw e;
+    }
+  }
+
   const reference = `frq_${requestId.replace(/-/g, "").slice(0, 12)}_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
   const { initializeTransaction } = await import("./paystack.server");
   const tx = await initializeTransaction({ email: r.email, amountKobo, reference, callbackUrl });
 
+  await sql`insert into payment_attempts (reference, repair_request_id, amount_kobo)
+            values (${reference}, ${requestId}, ${amountKobo}) on conflict (reference) do nothing`;
   await sql`update repair_requests set paystack_reference = ${reference}, updated_at = now()
             where id = ${requestId} and status = 'technician_pending'`;
   return { authorizationUrl: tx.authorizationUrl, reference };
@@ -297,7 +314,9 @@ async function markPaidAndConfirm(requestId: string): Promise<void> {
 /** Verifies a payment with Paystack server-side, then confirms the booking. */
 export async function verifyAndConfirmPayment(user: AppUser, requestId: string, reference: string): Promise<BookingView> {
   const r = await loadPayableRequest(requestId, user.id);
-  if (!r.paystack_reference || r.paystack_reference !== reference) {
+  const owned = (await getSql()`select 1 from payment_attempts
+                                 where reference = ${reference} and repair_request_id = ${requestId}`) as unknown[];
+  if (owned.length === 0) {
     throw new Error("This payment reference doesn't match this booking.");
   }
   if (r.status !== "confirmed") {
@@ -312,8 +331,10 @@ export async function handleChargeSuccess(reference: string): Promise<void> {
   const sql = getSql();
   const rows = (await sql`
     select r.id, r.status, s.base_service_fee as fee
-    from repair_requests r left join services s on s.id = r.service_id
-    where r.paystack_reference = ${reference}
+    from payment_attempts pa
+    join repair_requests r on r.id = pa.repair_request_id
+    left join services s on s.id = r.service_id
+    where pa.reference = ${reference}
   `) as Array<{ id: string; status: string; fee: string }>;
   const r = rows[0];
   if (!r || r.status === "confirmed" || r.status === "cancelled") return;

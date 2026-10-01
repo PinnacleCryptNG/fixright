@@ -107,7 +107,8 @@ export async function listMyOffers(user: AppUser, requestId?: string): Promise<T
     where o.technician_id = ${id}
       and tp.available = true and tp.verification_status = 'verified'
       and ((o.status = 'offered' and r.status = 'matching')
-           or (${requestId ?? null}::uuid is not null and r.id = ${requestId ?? null}::uuid))
+           or (${requestId ?? null}::uuid is not null and r.id = ${requestId ?? null}::uuid
+               and o.status in ('offered', 'accepted')))
       and (${requestId ?? null}::uuid is null or r.id = ${requestId ?? null}::uuid)
     order by o.created_at desc
   `) as TechOffer[];
