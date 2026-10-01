@@ -1,4 +1,5 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
+import { clerkAppearance, useIsDark } from "@/components/theme";
 import { UserButton } from "@clerk/clerk-react";
 import { Wrench } from "lucide-react";
 import type { ReactNode } from "react";
@@ -30,7 +31,7 @@ export function DashboardShell({ area, navItems, children }: Props) {
               {area}
             </span>
           </Link>
-          <UserButton />
+          <UserButton key={isDark ? "d" : "l"} appearance={clerkAppearance(isDark)} />
         </div>
       </header>
 

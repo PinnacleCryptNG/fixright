@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { clerkAppearance, useIsDark } from "@/components/theme";
 import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 import { LayoutDashboard, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -88,7 +89,7 @@ export function SiteHeader() {
             <Link to={dashboardHref} className={cn(linkBase, "hidden px-2 sm:inline-flex")}>
               Dashboard
             </Link>
-            <UserButton>
+            <UserButton key={isDark ? "d" : "l"} appearance={clerkAppearance(isDark)}>
               <UserButton.MenuItems>
                 <UserButton.Link
                   label="Dashboard"
