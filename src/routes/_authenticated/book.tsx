@@ -12,10 +12,11 @@ import { LocationPicker, type PickedLocation } from "@/components/location-picke
 import { useAppUser } from "@/hooks/use-app-user";
 import {
   cancelRepairRequest,
-  confirmRepairBooking,
   getRepairRequest,
+  initializeRepairPayment,
   listServices,
   submitRepairRequest,
+  verifyRepairPayment,
 } from "@/lib/fixright.functions";
 import { formatNaira, formatSlot, formatTime, todayLocalISO } from "@/lib/format";
 import { SERVICE_FEE_NOTE } from "@/lib/config";
@@ -23,7 +24,7 @@ import type { AlternativeSlot, BookingView, ServiceRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/book")({
-  validateSearch: z.object({ request: z.string().uuid().optional() }),
+  validateSearch: z.object({ request: z.string().uuid().optional(), reference: z.string().optional() }),
   head: () => ({
     meta: [
       { title: "Book a repair — FixRight" },
@@ -70,7 +71,7 @@ const emptyDraft: Draft = {
 };
 
 const STEPS = ["Service", "Problem", "Location", "Availability", "Review"];
-type Phase = "form" | "matching" | "waiting" | "matched" | "payment" | "none" | "booked";
+type Phase = "form" | "matching" | "waiting" | "matched" | "payment" | "processing" | "none" | "booked";
 
 function BookPage() {
   const { role, isPending } = useAppUser();
@@ -81,20 +82,39 @@ function BookPage() {
   const [busy, setBusy] = useState(false);
 
   const submit = useServerFn(submitRepairRequest);
-  const confirm = useServerFn(confirmRepairBooking);
+  const initPay = useServerFn(initializeRepairPayment);
+  const verifyPay = useServerFn(verifyRepairPayment);
   const cancel = useServerFn(cancelRepairRequest);
 
   const getReq = useServerFn(getRepairRequest);
-  const { request: resumeId } = Route.useSearch();
+  const { request: resumeId, reference } = Route.useSearch();
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Resume a request from the dashboard, and poll while technicians decide.
   useEffect(() => {
     if (!resumeId || booking) return;
+    const apply = (b: BookingView) => {
+      setBooking(b);
+      setPhase(b.status === "confirmed" ? "booked" : phaseFor(b));
+    };
+    if (reference) {
+      // Returning from Paystack: always verify server-side before confirming.
+      setPhase("processing");
+      verifyPay({ data: { requestId: resumeId, reference } })
+        .then(apply)
+        .catch((e) => {
+          setPaymentError(e instanceof Error ? e.message : "We couldn't verify your payment.");
+          getReq({ data: { requestId: resumeId } })
+            .then((b) => {
+              setBooking(b);
+              setPhase("payment");
+            })
+            .catch(() => setPhase("form"));
+        });
+      return;
+    }
     getReq({ data: { requestId: resumeId } })
-      .then((b) => {
-        setBooking(b);
-        setPhase(b.status === "confirmed" ? "booked" : phaseFor(b));
-      })
+      .then(apply)
       .catch(() => undefined);
   }, [resumeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -160,16 +180,15 @@ function BookPage() {
     }
   }
 
-  async function handleConfirm() {
+  async function handlePay() {
     if (!booking) return;
     setBusy(true);
+    setPaymentError(null);
     try {
-      const result = await confirm({ data: { requestId: booking.id } });
-      setBooking(result);
-      setPhase("booked");
+      const { authorizationUrl } = await initPay({ data: { requestId: booking.id } });
+      window.location.href = authorizationUrl;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "We couldn't confirm this booking.");
-    } finally {
+      setPaymentError(e instanceof Error ? e.message : "We couldn't start the payment. Please try again.");
       setBusy(false);
     }
   }
