@@ -41,6 +41,8 @@ export async function initializeTransaction(input: {
       currency: "NGN",
       reference: input.reference,
       callback_url: input.callbackUrl,
+      // Offer every NGN method; customer picks in Paystack checkout.
+      channels: ["card", "bank_transfer", "ussd", "bank", "qr"],
     }),
   });
   return { authorizationUrl: data.data.authorization_url, reference: data.data.reference };
