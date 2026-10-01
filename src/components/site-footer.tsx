@@ -1,59 +1,96 @@
 import { Link } from "@tanstack/react-router";
 
-import { SERVICE_FEE_NOTE } from "@/lib/config";
+type FooterLink = {
+  label: string;
+  to: "/" | "/book" | "/sign-up" | "/sign-in" | "/about" | "/contact" | "/help" | "/privacy" | "/terms";
+  hash?: string;
+  search?: { role: "technician" };
+};
+
+const groups: { title: string; links: FooterLink[] }[] = [
+  {
+    title: "For customers",
+    links: [
+      { label: "Find a Technician", to: "/", hash: "services" },
+      { label: "How It Works", to: "/", hash: "how-it-works" },
+      { label: "Book a Repair", to: "/book" },
+    ],
+  },
+  {
+    title: "For technicians",
+    links: [
+      { label: "Become a Technician", to: "/sign-up", search: { role: "technician" } },
+      { label: "How FixRight Works", to: "/", hash: "how-it-works" },
+      { label: "Technician Sign In", to: "/sign-in" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "About FixRight", to: "/about" },
+      { label: "Contact", to: "/contact" },
+      { label: "Help", to: "/help" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Privacy Policy", to: "/privacy" },
+      { label: "Terms of Service", to: "/terms" },
+    ],
+  },
+];
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border bg-surface">
-      <div className="container-page grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div className="max-w-sm">
-          <p className="text-lg font-semibold tracking-tight">FixRight</p>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            A repair-booking service connecting customers with nearby available technicians.
-          </p>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">{SERVICE_FEE_NOTE}</p>
+    <footer className="bg-ink text-ink-foreground">
+      <div className="container-page py-16 sm:py-20">
+        <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xl font-bold tracking-tight">FixRight</p>
+            <p className="mt-6 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+              Something broken?
+              <br />
+              We'll find someone who can fix it.
+            </p>
+          </div>
+          <Link
+            to="/book"
+            className="inline-flex h-12 w-full items-center justify-center rounded-md bg-primary px-6 text-base font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary-deep sm:w-auto"
+          >
+            Find a Technician
+          </Link>
         </div>
 
-        <div>
-          <p className="text-sm font-medium">Customers</p>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link to="/" hash="how-it-works" className="hover:text-foreground">
-                How it works
-              </Link>
-            </li>
-            <li>
-              <Link to="/" hash="services" className="hover:text-foreground">
-                Services
-              </Link>
-            </li>
-            <li>
-              <Link to="/sign-up" search={{ role: "customer" }} className="hover:text-foreground">
-                Find a technician
-              </Link>
-            </li>
-          </ul>
+        <div className="mt-14 border-t border-ink-foreground/15" />
+
+        <div className="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          {groups.map((group) => (
+            <nav key={group.title} aria-label={group.title}>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-ink-muted">
+                {group.title}
+              </p>
+              <ul className="mt-4 space-y-3">
+                {group.links.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      to={link.to}
+                      hash={link.hash}
+                      search={link.search}
+                      className="text-[15px] text-ink-foreground/85 transition-colors duration-200 hover:text-ink-foreground"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
         </div>
 
-        <div>
-          <p className="text-sm font-medium">Technicians</p>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link to="/sign-up" search={{ role: "technician" }} className="hover:text-foreground">
-                Join as a technician
-              </Link>
-            </li>
-            <li>
-              <Link to="/sign-in" className="hover:text-foreground">
-                Technician sign in
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-border">
-        <div className="container-page py-5 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} FixRight. Demo environment with fictional technician data.
+        <div className="mt-14 flex flex-col gap-2 border-t border-ink-foreground/15 pt-6 text-[13px] text-ink-muted sm:flex-row sm:justify-between">
+          <p>© {new Date().getFullYear()} FixRight</p>
+          <p>Available across Nigeria</p>
         </div>
       </div>
     </footer>

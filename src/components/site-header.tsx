@@ -1,125 +1,132 @@
 import { Link } from "@tanstack/react-router";
 import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
-import { Menu, Wrench } from "lucide-react";
+import { LayoutDashboard, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 import { homeForRole } from "@/components/role-redirect";
 import { useAppUser } from "@/hooks/use-app-user";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const publicLinks = [
-  { label: "Services", to: "/", hash: "services" },
-  { label: "How it works", to: "/", hash: "how-it-works" },
+type NavLink = {
+  label: string;
+  to: "/" | "/sign-up" | "/about";
+  hash?: string;
+  search?: { role: "technician" };
+};
+
+const publicLinks: NavLink[] = [
+  { label: "Find a Technician", to: "/", hash: "services" },
+  { label: "How It Works", to: "/", hash: "how-it-works" },
+  { label: "For Technicians", to: "/sign-up", search: { role: "technician" } },
+  { label: "About", to: "/about" },
 ];
+
+const linkBase =
+  "text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground";
+const ctaClass =
+  "inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary-deep";
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { role } = useAppUser();
   const dashboardHref = homeForRole(role);
+  const close = () => setOpen(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
-      <div className="container-page flex h-16 items-center justify-between gap-4">
-        <Link to="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Wrench className="h-4 w-4" />
-          </span>
-          <span className="text-lg font-semibold tracking-tight">FixRight</span>
+    <header className="sticky top-0 z-40 border-b border-border bg-card">
+      <div className="container-page flex h-[70px] items-center justify-between gap-6">
+        <Link
+          to="/"
+          onClick={close}
+          className="text-xl font-bold tracking-tight text-foreground"
+          aria-label="FixRight home"
+        >
+          Fix<span className="text-primary">Right</span>
         </Link>
 
-        <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
+        <nav aria-label="Main" className="hidden items-center gap-5 lg:flex lg:gap-8">
           {publicLinks.map((link) => (
             <Link
               key={link.label}
               to={link.to}
               hash={link.hash}
-              className="transition-colors hover:text-foreground"
+              search={link.search}
+              className={linkBase}
+              activeOptions={{ exact: true, includeHash: true }}
+              activeProps={link.to === "/about" ? { className: "text-primary" } : undefined}
             >
               {link.label}
             </Link>
           ))}
-          <Link
-            to="/sign-up"
-            search={{ role: "technician" }}
-            className="transition-colors hover:text-foreground"
-          >
-            Become a Technician
-          </Link>
-          <SignedOut>
-            <Link to="/sign-in" className="transition-colors hover:text-foreground">
-              Sign In
-            </Link>
-          </SignedOut>
         </nav>
 
-        <div className="flex items-center gap-2">
-          <SignedIn>
-            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
-              <Link to={dashboardHref}>My dashboard</Link>
-            </Button>
-            <UserButton />
-          </SignedIn>
+        <div className="flex items-center gap-3">
           <SignedOut>
-            <Button asChild size="sm">
-              <Link to="/book">
-                Find a Technician
-              </Link>
-            </Button>
+            <Link to="/sign-in" className={cn(linkBase, "hidden px-2 sm:inline-flex")}>
+              Sign in
+            </Link>
+            <Link to="/book" className={cn(ctaClass, "hidden sm:inline-flex")}>
+              Book a Repair
+            </Link>
           </SignedOut>
+          <SignedIn>
+            <Link to={dashboardHref} className={cn(linkBase, "hidden px-2 sm:inline-flex")}>
+              Dashboard
+            </Link>
+            <UserButton>
+              <UserButton.MenuItems>
+                <UserButton.Link
+                  label="Dashboard"
+                  labelIcon={<LayoutDashboard className="h-4 w-4" />}
+                  href={dashboardHref}
+                />
+              </UserButton.MenuItems>
+            </UserButton>
+          </SignedIn>
           <button
             type="button"
-            aria-label="Toggle menu"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border md:hidden"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium transition-colors duration-200 hover:bg-muted lg:hidden"
           >
-            <Menu className="h-4 w-4" />
+            {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            Menu
           </button>
         </div>
       </div>
 
-      <div
-        className={cn(
-          "overflow-hidden border-t border-border bg-card md:hidden",
-          open ? "block" : "hidden",
-        )}
-      >
-        <nav className="container-page flex flex-col gap-1 py-3 text-sm">
+      <div id="mobile-nav" className={cn("border-t border-border bg-card lg:hidden", open ? "block" : "hidden")}>
+        <nav aria-label="Mobile" className="container-page flex flex-col py-4">
           {publicLinks.map((link) => (
             <Link
               key={link.label}
               to={link.to}
               hash={link.hash}
-              onClick={() => setOpen(false)}
-              className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              search={link.search}
+              onClick={close}
+              className="rounded-md px-2 py-3.5 text-base font-medium text-foreground transition-colors duration-200 hover:bg-muted"
             >
               {link.label}
             </Link>
           ))}
-          <Link
-            to="/sign-up"
-            search={{ role: "technician" }}
-            onClick={() => setOpen(false)}
-            className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            Become a Technician
-          </Link>
+          <div className="my-3 border-t border-border" />
           <SignedOut>
             <Link
               to="/sign-in"
-              onClick={() => setOpen(false)}
-              className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={close}
+              className="rounded-md px-2 py-3.5 text-base font-medium text-foreground hover:bg-muted"
             >
-              Sign In
+              Sign in
+            </Link>
+            <Link to="/book" onClick={close} className={cn(ctaClass, "mt-2 h-12 text-base")}>
+              Book a Repair
             </Link>
           </SignedOut>
           <SignedIn>
-            <Link
-              to={dashboardHref}
-              onClick={() => setOpen(false)}
-              className="rounded-md px-2 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              My dashboard
+            <Link to={dashboardHref} onClick={close} className={cn(ctaClass, "h-12 text-base")}>
+              Go to dashboard
             </Link>
           </SignedIn>
         </nav>
