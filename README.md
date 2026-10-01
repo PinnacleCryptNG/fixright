@@ -259,9 +259,7 @@ Admins can:
 - Reject technicians
 - Suspend technicians
 - Review customers
-- Review repair requests
-- Review appointments
-- Manage services
+- View services
 
 Admin actions are protected server-side and require the admin role.
 
