@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 import { LayoutDashboard, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { homeForRole } from "@/components/role-redirect";
+import { ThemeToggle } from "@/components/theme";
 import { useAppUser } from "@/hooks/use-app-user";
 import { cn } from "@/lib/utils";
 
@@ -31,14 +32,26 @@ export function SiteHeader() {
   const { role } = useAppUser();
   const dashboardHref = homeForRole(role);
   const close = () => setOpen(false);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const on = () => setScrolled(window.scrollY > 8);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card">
+    <header
+      className={cn(
+        "sticky top-0 z-40 border-b backdrop-blur-md transition-[background-color,border-color,box-shadow] duration-200",
+        scrolled || open ? "border-border bg-nav-scrolled shadow-nav" : "border-border/50 bg-nav",
+      )}
+    >
       <div className="container-page flex h-[70px] items-center justify-between gap-6">
         <Link
           to="/"
           onClick={close}
-          className="text-xl font-bold tracking-tight text-foreground"
+          className="text-[1.375rem] font-bold tracking-[-0.03em] text-foreground"
           aria-label="FixRight home"
         >
           Fix<span className="text-primary">Right</span>
@@ -61,6 +74,8 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle className="hidden sm:inline-flex" />
+          <span aria-hidden className="hidden h-5 w-px bg-border sm:block" />
           <SignedOut>
             <Link to="/sign-in" className={cn(linkBase, "hidden px-2 sm:inline-flex")}>
               Sign in
@@ -97,7 +112,7 @@ export function SiteHeader() {
         </div>
       </div>
 
-      <div id="mobile-nav" className={cn("border-t border-border bg-card lg:hidden", open ? "block" : "hidden")}>
+      <div id="mobile-nav" className={cn("border-t border-border lg:hidden", open ? "block" : "hidden")}>
         <nav aria-label="Mobile" className="container-page flex flex-col py-4">
           {publicLinks.map((link) => (
             <Link
@@ -111,7 +126,11 @@ export function SiteHeader() {
               {link.label}
             </Link>
           ))}
-          <div className="my-3 border-t border-border" />
+          <div className="my-3 flex items-center justify-between border-t border-border pt-3 sm:hidden">
+            <span className="px-2 text-sm text-muted-foreground">Theme</span>
+            <ThemeToggle />
+          </div>
+          <div className="my-3 hidden border-t border-border sm:block" />
           <SignedOut>
             <Link
               to="/sign-in"

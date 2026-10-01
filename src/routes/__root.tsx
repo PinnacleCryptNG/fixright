@@ -15,6 +15,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CLERK_PUBLISHABLE_KEY } from "../lib/config";
 import { Toaster } from "../components/ui/sonner";
+import { AmbientBackground, themeInitScript } from "../components/theme";
 
 function NotFoundComponent() {
   return (
@@ -109,8 +110,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
       </head>
       <body>
@@ -128,6 +130,7 @@ function RootComponent() {
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
       <QueryClientProvider client={queryClient}>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <AmbientBackground />
         <Outlet />
         <Toaster />
       </QueryClientProvider>

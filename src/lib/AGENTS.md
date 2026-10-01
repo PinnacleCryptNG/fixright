@@ -1,0 +1,11 @@
+# src/lib rules
+
+- Client-callable server fns live in `fixright.functions.ts` and import `*.server` modules inside handlers, keeping server code out of client bundles.
+- Clerk tokens are verified in `clerk-auth.server.ts` via remote JWKS, so no Clerk secret key is needed.
+- Matching lives only in `matching.server.ts` (`findMatch`) so it can be swapped without touching booking.
+- Appointments are created only in `booking.server.ts` `confirmBooking`, which re-checks the slot to avoid double-booking.
+- Requests are offered to all eligible technicians via `request_offers`; first accept wins via a conditional update, so duplicate claims are impossible.
+- Demo technicians have no login; `dispatchRequest` auto-accepts for the top one only when no eligible technician has a Clerk account.
+- `technician.server.ts` exposes customer contact only after acceptance.
+- States/LGAs live only in `nigeria-locations.ts` (shared by UI and validation); coverage is one state, whole or listed LGAs, no radius.
+- Technician photos upload via Clerk `setProfileImage`, URL stored in `users.avatar_url`.
