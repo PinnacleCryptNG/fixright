@@ -1,7 +1,7 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
+import { Logo } from "@/components/logo";
 import { clerkAppearance, ThemeToggle, useIsDark } from "@/components/theme";
 import { UserButton } from "@clerk/clerk-react";
-import { Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 
 export type ShellNavItem = {
@@ -24,10 +24,7 @@ export function DashboardShell({ area, navItems, children }: Props) {
       <header className="border-b border-border bg-card">
         <div className="container-page flex h-16 items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Wrench className="h-4 w-4" />
-            </span>
-            <span className="font-semibold tracking-tight">FixRight</span>
+            <Logo className="text-xl" />
             <span className="ml-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
               {area}
             </span>
