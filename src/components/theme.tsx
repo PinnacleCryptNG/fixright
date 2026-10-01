@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { dark as clerkDark } from "@clerk/themes";
+
 import { cn } from "@/lib/utils";
 
 export type Theme = "light" | "dark";
@@ -115,4 +117,22 @@ export function useIsDark() {
     return () => obs.disconnect();
   }, []);
   return dark;
+}
+
+/** Clerk widget styling matched to the FixRight palette for the active theme. */
+export function clerkAppearance(isDark: boolean) {
+  return isDark
+    ? {
+        baseTheme: clerkDark,
+        variables: {
+          colorPrimary: "#4faf8d",
+          colorBackground: "#17211d",
+          colorText: "#f4f5f1",
+          colorTextSecondary: "#a6aea9",
+          colorInputBackground: "#101713",
+          colorInputText: "#f4f5f1",
+          fontFamily: "DM Sans, sans-serif",
+        },
+      }
+    : { variables: { colorPrimary: "#176b52", colorText: "#17211d", colorTextSecondary: "#737a75", fontFamily: "DM Sans, sans-serif" } };
 }

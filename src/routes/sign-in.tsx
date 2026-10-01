@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { SignIn } from "@clerk/clerk-react";
 import { z } from "zod";
 
+import { clerkAppearance, useIsDark } from "@/components/theme";
+
 const searchSchema = z.object({
   redirect: z.string().regex(/^\/[a-z0-9/_-]*$/i).optional().catch(undefined),
 });
@@ -21,6 +23,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInPage() {
+  const isDark = useIsDark();
   const { redirect } = Route.useSearch();
   const target = redirect ?? "/dashboard";
   return (
@@ -29,6 +32,8 @@ function SignInPage() {
         FixRight
       </Link>
       <SignIn
+        key={isDark ? "dark" : "light"}
+        appearance={clerkAppearance(isDark)}
         routing="hash"
         signUpUrl={redirect ? `/sign-up?role=customer&redirect=${encodeURIComponent(redirect)}` : "/sign-up"}
         forceRedirectUrl={target}
