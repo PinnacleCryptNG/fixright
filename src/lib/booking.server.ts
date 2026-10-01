@@ -1,5 +1,10 @@
 import { getSql } from "./db.server";
-import { findAlternatives, findCandidates, isSlotStillFree, slotForTechnician } from "./matching.server";
+import {
+  findAlternatives,
+  findCandidates,
+  isSlotStillFree,
+  slotForTechnician,
+} from "./matching.server";
 import type { AppUser, BookingView, CustomerBookings, MatchedTechnician } from "./types";
 
 export type NewRequestInput = {
@@ -19,7 +24,10 @@ export type NewRequestInput = {
 };
 
 /** Public-safe technician fields only: never phone, email or exact coordinates. */
-async function getPublicTechnician(technicianId: string, lga: string | null): Promise<MatchedTechnician> {
+async function getPublicTechnician(
+  technicianId: string,
+  lga: string | null,
+): Promise<MatchedTechnician> {
   const sql = getSql();
   const rows = (await sql`
     select tp.id, u.full_name, u.avatar_url, tp.rating, tp.completed_jobs, tp.years_experience,
@@ -36,7 +44,11 @@ async function getPublicTechnician(technicianId: string, lga: string | null): Pr
   return rows[0]!;
 }
 
-const requestSelect = (sql: ReturnType<typeof getSql>, requestId: string, customerId: string) => sql`
+const requestSelect = (
+  sql: ReturnType<typeof getSql>,
+  requestId: string,
+  customerId: string,
+) => sql`
   select r.id, r.status, r.problem_description, r.device_brand, r.device_model, r.address,
          r.area_name, r.state, r.lga, r.landmark,
          to_char(r.requested_date, 'YYYY-MM-DD') as requested_date,
@@ -66,7 +78,9 @@ async function loadBooking(requestId: string, customerId: string): Promise<Booki
     ? await getPublicTechnician(matched_technician_id, row.lga ?? null)
     : null;
   const open = (await sql`select count(*)::int as n from request_offers
-                          where repair_request_id = ${requestId} and status = 'offered'`) as Array<{ n: number }>;
+                          where repair_request_id = ${requestId} and status = 'offered'`) as Array<{
+    n: number;
+  }>;
   const waiting = !technician && rest.status === "matching" && open[0]!.n > 0;
   const alternatives =
     !technician && !waiting && rest.status === "matching" && rest.service_id && rest.requested_date
@@ -95,13 +109,29 @@ export async function dispatchRequest(requestId: string) {
            to_char(availability_start, 'HH24:MI') as s, to_char(availability_end, 'HH24:MI') as e,
            coalesce((select array_agg(technician_id) from request_offers where repair_request_id = r.id), '{}') as seen
     from repair_requests r where id = ${requestId}
-  `) as Array<{ service_id: string; state: string; lga: string; status: string; matched_technician_id: string | null; d: string; s: string; e: string; seen: string[] }>;
+  `) as Array<{
+    service_id: string;
+    state: string;
+    lga: string;
+    status: string;
+    matched_technician_id: string | null;
+    d: string;
+    s: string;
+    e: string;
+    seen: string[];
+  }>;
   const r = rows[0];
   if (!r || r.status !== "matching" || r.matched_technician_id) return;
 
   const candidates = await findCandidates({
-    serviceId: r.service_id, state: r.state, lga: r.lga, date: r.d, windowStart: r.s, windowEnd: r.e,
-    excludeTechnicianIds: r.seen, ignoreRequestId: requestId,
+    serviceId: r.service_id,
+    state: r.state,
+    lga: r.lga,
+    date: r.d,
+    windowStart: r.s,
+    windowEnd: r.e,
+    excludeTechnicianIds: r.seen,
+    ignoreRequestId: requestId,
   });
   if (!candidates.length) return;
 
@@ -137,14 +167,27 @@ export async function acceptOffer(technicianId: string, requestId: string) {
     join repair_requests r on r.id = o.repair_request_id
     join technician_profiles tp on tp.id = o.technician_id
     where o.repair_request_id = ${requestId} and o.technician_id = ${technicianId}
-  `) as Array<{ status: string; d: string; s: string; e: string; ws: string; we: string; request_status: string; matched_technician_id: string | null; vs: string }>;
+  `) as Array<{
+    status: string;
+    d: string;
+    s: string;
+    e: string;
+    ws: string;
+    we: string;
+    request_status: string;
+    matched_technician_id: string | null;
+    vs: string;
+  }>;
   const o = offers[0];
   if (!o) throw new Error("This request isn't available to you.");
   if (o.vs !== "verified") throw new Error("Only verified technicians can accept requests.");
-  if (o.matched_technician_id && o.matched_technician_id !== technicianId) throw new Error(ALREADY_ACCEPTED);
+  if (o.matched_technician_id && o.matched_technician_id !== technicianId)
+    throw new Error(ALREADY_ACCEPTED);
   if (o.matched_technician_id === technicianId) return { ok: true };
   if (o.status !== "offered" || o.request_status !== "matching") {
-    throw new Error(o.status === "withdrawn" ? ALREADY_ACCEPTED : "This request is no longer available.");
+    throw new Error(
+      o.status === "withdrawn" ? ALREADY_ACCEPTED : "This request is no longer available.",
+    );
   }
 
   let slot = { start: o.s, end: o.e };
@@ -180,12 +223,17 @@ export async function declineOffer(technicianId: string, requestId: string) {
   await sql`update request_offers set status = 'declined', responded_at = now()
             where repair_request_id = ${requestId} and technician_id = ${technicianId} and status = 'offered'`;
   const open = (await sql`select count(*)::int as n from request_offers
-                          where repair_request_id = ${requestId} and status = 'offered'`) as Array<{ n: number }>;
+                          where repair_request_id = ${requestId} and status = 'offered'`) as Array<{
+    n: number;
+  }>;
   if (open[0]!.n === 0) await dispatchRequest(requestId);
   return { ok: true };
 }
 
-export async function createRepairRequest(user: AppUser, input: NewRequestInput): Promise<BookingView> {
+export async function createRepairRequest(
+  user: AppUser,
+  input: NewRequestInput,
+): Promise<BookingView> {
   const sql = getSql();
   const inserted = (await sql`
     insert into repair_requests (
@@ -258,7 +306,8 @@ export async function initializePayment(
 
   // A previous checkout for this request may already have been paid (second
   // tab, repeated Pay click). Confirm it instead of opening another charge.
-  const previous = (await sql`select reference from payment_attempts where repair_request_id = ${requestId}
+  const previous =
+    (await sql`select reference from payment_attempts where repair_request_id = ${requestId}
                               order by created_at desc limit 5`) as Array<{ reference: string }>;
   for (const p of previous) {
     try {
@@ -296,7 +345,16 @@ async function markPaidAndConfirm(requestId: string): Promise<void> {
            s.base_service_fee as fee
     from repair_requests r left join services s on s.id = r.service_id
     where r.id = ${requestId}
-  `) as Array<{ customer_id: string; matched_technician_id: string | null; service_id: string; status: string; d: string; s: string; e: string; fee: string }>;
+  `) as Array<{
+    customer_id: string;
+    matched_technician_id: string | null;
+    service_id: string;
+    status: string;
+    d: string;
+    s: string;
+    e: string;
+    fee: string;
+  }>;
   const r = rows[0];
   if (!r || r.status === "cancelled" || !r.matched_technician_id) return;
 
@@ -312,7 +370,11 @@ async function markPaidAndConfirm(requestId: string): Promise<void> {
 }
 
 /** Verifies a payment with Paystack server-side, then confirms the booking. */
-export async function verifyAndConfirmPayment(user: AppUser, requestId: string, reference: string): Promise<BookingView> {
+export async function verifyAndConfirmPayment(
+  user: AppUser,
+  requestId: string,
+  reference: string,
+): Promise<BookingView> {
   const r = await loadPayableRequest(requestId, user.id);
   const owned = (await getSql()`select 1 from payment_attempts
                                  where reference = ${reference} and repair_request_id = ${requestId}`) as unknown[];
@@ -343,7 +405,11 @@ export async function handleChargeSuccess(reference: string): Promise<void> {
 }
 
 /** Double-checks with Paystack: success, exact amount in kobo, NGN currency. */
-async function verifyReferenceAgainstRequest(reference: string, _requestId: string, feeNaira: number): Promise<void> {
+async function verifyReferenceAgainstRequest(
+  reference: string,
+  _requestId: string,
+  feeNaira: number,
+): Promise<void> {
   const { verifyTransaction } = await import("./paystack.server");
   const tx = await verifyTransaction(reference);
   if (tx.status !== "success") {

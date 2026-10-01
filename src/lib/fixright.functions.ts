@@ -79,7 +79,13 @@ export const getPublicTechnician = createServerFn({ method: "GET" })
 
 const syncSchema = z.object({
   fullName: z.string().max(120).nullable().optional(),
-  avatarUrl: z.string().url().max(500).refine((u) => u.startsWith("https://"), "Invalid photo link").nullable().optional(),
+  avatarUrl: z
+    .string()
+    .url()
+    .max(500)
+    .refine((u) => u.startsWith("https://"), "Invalid photo link")
+    .nullable()
+    .optional(),
   desiredRole: z.enum(["customer", "technician"]).optional(),
 });
 
@@ -208,9 +214,12 @@ const newRequestSchema = z
   .refine((d) => new Date(`${d.date}T00:00:00Z`).toISOString().slice(0, 10) === d.date, {
     message: "Choose a real date",
   })
-  .refine((d) => d.date <= new Date(Date.now() + 3600_000 + 90 * 86400_000).toISOString().slice(0, 10), {
-    message: "Choose a date within the next 90 days",
-  });
+  .refine(
+    (d) => d.date <= new Date(Date.now() + 3600_000 + 90 * 86400_000).toISOString().slice(0, 10),
+    {
+      message: "Choose a date within the next 90 days",
+    },
+  );
 
 async function requireCustomer() {
   const { requireIdentity } = await import("./clerk-auth.server");
@@ -250,7 +259,9 @@ export const initializeRepairPayment = createServerFn({ method: "POST" })
 
 export const verifyRepairPayment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ requestId: z.string().uuid(), reference: z.string().trim().min(8).max(80) }).parse(d),
+    z
+      .object({ requestId: z.string().uuid(), reference: z.string().trim().min(8).max(80) })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const user = await requireCustomer();
@@ -292,8 +303,18 @@ export const getMyTechProfile = createServerFn({ method: "GET" }).handler(async 
 const profileSchema = z
   .object({
     fullName: z.string().trim().min(2).max(120),
-    phone: z.string().trim().regex(/^\+?[0-9 ]{10,16}$/, "Enter a valid phone number"),
-    avatarUrl: z.string().trim().url().max(500).refine((u) => u.startsWith("https://"), "Invalid photo link").nullable().optional(),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^\+?[0-9 ]{10,16}$/, "Enter a valid phone number"),
+    avatarUrl: z
+      .string()
+      .trim()
+      .url()
+      .max(500)
+      .refine((u) => u.startsWith("https://"), "Invalid photo link")
+      .nullable()
+      .optional(),
     bio: z.string().trim().max(600).nullable().optional(),
     yearsExperience: z.number().int().min(0).max(60),
     serviceIds: z.array(z.string().uuid()).min(1).max(20),
@@ -305,9 +326,12 @@ const profileSchema = z
     available: z.boolean(),
   })
   .refine((d) => d.workEnd > d.workStart, { message: "Working hours must end after they start" })
-  .refine((d) => d.entireState || (d.lgas.length > 0 && d.lgas.every((l) => isValidLga(d.state, l))), {
-    message: "Choose at least one LGA in your state",
-  });
+  .refine(
+    (d) => d.entireState || (d.lgas.length > 0 && d.lgas.every((l) => isValidLga(d.state, l))),
+    {
+      message: "Choose at least one LGA in your state",
+    },
+  );
 
 export const saveMyTechProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => profileSchema.parse(d))
@@ -391,10 +415,24 @@ export const adminGetTechnician = createServerFn({ method: "POST" })
       from technician_profiles tp join users u on u.id = tp.user_id
       where tp.id = ${data.id}
     `) as Array<{
-      id: string; full_name: string | null; email: string | null; phone: string | null; avatar_url: string | null;
-      bio: string | null; years_experience: number; verification_status: import("./types").VerificationStatus;
-      available: boolean; rating: string; completed_jobs: number;
-      work_start: string; work_end: string; created_at: string; state: string | null; entire_state: boolean; lgas: string[]; services: string[];
+      id: string;
+      full_name: string | null;
+      email: string | null;
+      phone: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      years_experience: number;
+      verification_status: import("./types").VerificationStatus;
+      available: boolean;
+      rating: string;
+      completed_jobs: number;
+      work_start: string;
+      work_end: string;
+      created_at: string;
+      state: string | null;
+      entire_state: boolean;
+      lgas: string[];
+      services: string[];
     }>;
     if (!rows[0]) throw new Error("Technician not found.");
     return rows[0];
@@ -403,7 +441,12 @@ export const adminGetTechnician = createServerFn({ method: "POST" })
 /** Admin only: change a technician's verification status (persisted). */
 export const adminSetVerification = createServerFn({ method: "POST" })
   .inputValidator((d) =>
-    z.object({ id: z.string().uuid(), status: z.enum(["pending", "verified", "rejected", "suspended"]) }).parse(d),
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["pending", "verified", "rejected", "suspended"]),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { requireIdentity } = await import("./clerk-auth.server");
