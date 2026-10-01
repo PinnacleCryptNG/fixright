@@ -20,7 +20,7 @@ export function TechnicianPortrait({
   imgClassName,
 }: {
   name: string | null;
-  src?: string | null;
+  src?: string | null | undefined;
   className?: string;
   imgClassName?: string;
 }) {
