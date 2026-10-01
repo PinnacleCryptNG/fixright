@@ -79,6 +79,9 @@ export async function sendVerificationEmail(technicianId: string, decision: Deci
     });
     if (!res.ok) {
       console.error(`[verification-email] send failed [${res.status}]: ${await res.text()}`);
+      // Release the claim so a later decision can retry the send.
+      await sql`delete from verification_emails where technician_id = ${technicianId}
+                and status = ${decision}::verification_status and sent_at is null`;
       return;
     }
     await sql`update verification_emails set sent_at = now()
