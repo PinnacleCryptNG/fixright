@@ -15,32 +15,67 @@ export const listServices = createServerFn({ method: "GET" }).handler(async () =
   `) as ServiceRecord[];
 });
 
-/** Public: verified, available demo technicians. */
+const PUBLIC_TECH_COLUMNS = `tp.id, u.full_name, u.avatar_url, tp.bio, tp.rating, tp.completed_jobs,
+  tp.years_experience, tp.verification_status, tp.available,
+  array[coalesce(tp.showcase_area, (select a.lga || ', ' || a.state from technician_service_areas a where a.technician_id = tp.id limit 1))] as areas,
+  coalesce((select array_agg(s.name order by s.name) from technician_services ts
+            join services s on s.id = ts.service_id where ts.technician_id = tp.id), '{}') as services`;
+
+/** Public: homepage showcase — the top technician per state (max 3). */
 export const listTechnicians = createServerFn({ method: "GET" }).handler(async () => {
   const { getSql } = await import("./db.server");
   const sql = getSql();
-  // Homepage showcase: the top demo-labelled technician per state (max 3), not a directory.
-  return (await sql`
+  return (await sql.query(`
     select * from (
-      select distinct on (a0.state) tp.id,
-             u.full_name,
-             tp.bio,
-             tp.rating,
-             tp.completed_jobs,
-             tp.years_experience,
-             tp.verification_status,
-             tp.available,
-             array[tp.showcase_area] as areas,
-             coalesce((select array_agg(s.name order by s.name) from technician_services ts
-                       join services s on s.id = ts.service_id where ts.technician_id = tp.id), '{}') as services
+      select distinct on (a0.state) ${PUBLIC_TECH_COLUMNS}
       from technician_profiles tp
       join users u on u.id = tp.user_id
       join lateral (select state from technician_service_areas where technician_id = tp.id limit 1) a0 on true
       where tp.verification_status = 'verified' and tp.available and tp.showcase_area is not null
       order by a0.state, tp.rating desc, tp.completed_jobs desc
     ) t order by completed_jobs desc limit 3
-  `) as TechnicianCard[];
+  `)) as TechnicianCard[];
 });
+
+/** Public: every verified technician, for the technicians page. */
+export const listAllTechnicians = createServerFn({ method: "GET" }).handler(async () => {
+  const { getSql } = await import("./db.server");
+  const sql = getSql();
+  return (await sql.query(`
+    select ${PUBLIC_TECH_COLUMNS}
+    from technician_profiles tp join users u on u.id = tp.user_id
+    where tp.verification_status = 'verified'
+    order by tp.rating desc, tp.completed_jobs desc limit 60
+  `)) as TechnicianCard[];
+});
+
+/** Public: one verified technician's profile. Never returns contact details or IDs beyond the profile id. */
+export const getPublicTechnician = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { getSql } = await import("./db.server");
+    const sql = getSql();
+    const rows = (await sql.query(
+      `select ${PUBLIC_TECH_COLUMNS}, to_char(tp.work_start, 'HH24:MI') as work_start, to_char(tp.work_end, 'HH24:MI') as work_end
+       from technician_profiles tp join users u on u.id = tp.user_id
+       where tp.id = $1 and tp.verification_status = 'verified'`,
+      [data.id],
+    )) as Array<TechnicianCard & { work_start: string | null; work_end: string | null }>;
+    const tech = rows[0];
+    if (!tech) return null;
+    const areas = (await sql`
+      select state, lga, covers_entire_state from technician_service_areas
+      where technician_id = ${data.id} order by lga nulls first
+    `) as Array<{ state: string; lga: string | null; covers_entire_state: boolean }>;
+    return {
+      ...tech,
+      coverage: {
+        state: areas[0]?.state ?? null,
+        entireState: areas.some((a) => a.covers_entire_state),
+        lgas: areas.filter((a) => a.lga).map((a) => a.lga as string),
+      },
+    };
+  });
 
 const syncSchema = z.object({
   fullName: z.string().max(120).nullable().optional(),
