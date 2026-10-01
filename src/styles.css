@@ -2,7 +2,7 @@
 @source "../src";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 /*
  * FixRight design system.
@@ -59,8 +59,11 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --shadow-card: 0 1px 2px rgba(23, 33, 29, 0.04);
-  --shadow-lift: 0 8px 30px rgba(23, 33, 29, 0.08);
+  --color-nav: var(--nav);
+  --color-nav-scrolled: var(--nav-scrolled);
+  --shadow-card: var(--shadow-card-v);
+  --shadow-lift: var(--shadow-lift-v);
+  --shadow-nav: var(--shadow-nav-v);
 }
 
 :root {
@@ -69,7 +72,16 @@
   /* FixRight palette: Ink #17211D, Green #176B52, Deep Green #0F4D3B, Paper #F6F5F0, Stone #737A75, Line #E2E4DF */
   --background: #f6f5f0;
   --foreground: #17211d;
-  --surface: #f6f5f0;
+  --surface: rgba(255, 255, 255, 0.4);
+  --nav: rgba(255, 255, 255, 0.72);
+  --nav-scrolled: rgba(255, 255, 255, 0.92);
+  --shadow-card-v: 0 1px 2px rgba(23, 33, 29, 0.04);
+  --shadow-lift-v: 0 8px 30px rgba(23, 33, 29, 0.08);
+  --shadow-nav-v: 0 6px 24px -12px rgba(23, 33, 29, 0.18);
+  --amb-1: rgba(255, 255, 255, 0.85);
+  --amb-2: rgba(23, 107, 82, 0.045);
+  --amb-3: rgba(226, 228, 223, 0.7);
+  --amb-light: rgba(255, 255, 255, 0.55);
   --card: #ffffff;
   --card-foreground: #17211d;
   --popover: #ffffff;
@@ -112,13 +124,70 @@
   --sidebar-ring: oklch(0.505 0.096 172);
 }
 
+.dark {
+  --background: #101713;
+  --foreground: #f4f5f1;
+  --surface: rgba(23, 33, 29, 0.45);
+  --card: #17211d;
+  --card-foreground: #f4f5f1;
+  --popover: #17211d;
+  --popover-foreground: #f4f5f1;
+  --ink: #0b110e;
+  --ink-foreground: #f4f5f1;
+  --ink-muted: #8e9791;
+  --primary: #4faf8d;
+  --primary-deep: #3d9275;
+  --primary-foreground: #0b110e;
+  --primary-soft: rgba(79, 175, 141, 0.14);
+  --secondary: #1d2924;
+  --secondary-foreground: #f4f5f1;
+  --muted: #1d2924;
+  --muted-foreground: #a6aea9;
+  --accent: rgba(79, 175, 141, 0.14);
+  --accent-foreground: #8fd4b9;
+  --destructive: oklch(0.62 0.17 27);
+  --destructive-foreground: #f4f5f1;
+  --success: #4faf8d;
+  --success-foreground: #0b110e;
+  --warning: oklch(0.78 0.12 74);
+  --warning-foreground: oklch(0.22 0.03 74);
+  --border: #2b3530;
+  --input: #2b3530;
+  --ring: #4faf8d;
+  --sidebar: #131c18;
+  --sidebar-foreground: #f4f5f1;
+  --sidebar-primary: #4faf8d;
+  --sidebar-primary-foreground: #0b110e;
+  --sidebar-accent: #1d2924;
+  --sidebar-accent-foreground: #f4f5f1;
+  --sidebar-border: #2b3530;
+  --sidebar-ring: #4faf8d;
+  --nav: rgba(16, 23, 19, 0.7);
+  --nav-scrolled: rgba(16, 23, 19, 0.92);
+  --shadow-card-v: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-lift-v: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-nav-v: 0 6px 24px -12px rgba(0, 0, 0, 0.6);
+  --amb-1: rgba(23, 33, 29, 0.9);
+  --amb-2: rgba(23, 107, 82, 0.07);
+  --amb-3: rgba(15, 77, 59, 0.12);
+  --amb-light: rgba(79, 175, 141, 0.035);
+  color-scheme: dark;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
   }
 
-  body {
+  html {
     background-color: var(--color-background);
+  }
+  html.theme-anim,
+  html.theme-anim * {
+    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease !important;
+  }
+  body {
+    background-color: transparent;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -163,4 +232,43 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* Ambient background: soft, damped layers driven by --px/--py (-1..1) set from JS. */
+.ambient {
+  position: fixed;
+  inset: -24px;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ambient > span {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  will-change: transform;
+}
+.ambient .a1 {
+  width: 55vmax; height: 40vmax; left: -10vmax; top: -12vmax;
+  background: var(--amb-1);
+  transform: translate3d(calc(var(--px, 0) * 4px), calc(var(--py, 0) * 4px), 0);
+}
+.ambient .a2 {
+  width: 45vmax; height: 38vmax; right: -14vmax; top: 18vh;
+  background: var(--amb-2);
+  transform: translate3d(calc(var(--px, 0) * -7px), calc(var(--py, 0) * -6px), 0);
+}
+.ambient .a3 {
+  width: 50vmax; height: 30vmax; left: 15vw; bottom: -14vmax;
+  background: var(--amb-3);
+  transform: translate3d(calc(var(--px, 0) * 3px), calc(var(--py, 0) * -3px), 0);
+}
+.ambient .a4 {
+  width: 28vmax; height: 28vmax; filter: blur(80px);
+  left: calc(var(--lx, 50) * 1vw - 14vmax); top: calc(var(--ly, 30) * 1vh - 14vmax);
+  background: var(--amb-light);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambient > span { transform: none !important; }
+  html.theme-anim, html.theme-anim * { transition: none !important; }
 }
