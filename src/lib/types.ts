@@ -44,6 +44,7 @@ export type ServiceRecord = {
 export type TechnicianCard = {
   id: string;
   full_name: string | null;
+  avatar_url?: string | null;
   bio: string | null;
   rating: string;
   completed_jobs: number;

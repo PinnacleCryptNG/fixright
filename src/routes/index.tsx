@@ -20,6 +20,7 @@ import { useAppUser } from "@/hooks/use-app-user";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Button } from "@/components/ui/button";
+import { TechnicianGrid } from "@/components/technician/technician-card";
 import { listServices, listTechnicians } from "@/lib/fixright.functions";
 import { SERVICE_FEE_NOTE } from "@/lib/config";
 
@@ -97,8 +98,8 @@ function Landing() {
       <main className="flex-1">
         {/* Hero */}
         <section className="border-b border-border bg-surface">
-          <div className="container-page grid gap-12 py-16 sm:py-24 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <div className="rise-in">
+          <div className="container-page grid gap-12 py-16 sm:py-24">
+            <div className="rise-in max-w-3xl">
               <p className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5" /> Available across Nigeria
               </p>
@@ -126,38 +127,32 @@ function Landing() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-              <p className="text-sm font-medium">Technicians on FixRight</p>
-              <ul className="mt-4 divide-y divide-border">
-                {technicians.map((tech) => (
-                  <li key={tech.id} className="py-4 first:pt-0 last:pb-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">{tech.full_name}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {tech.services.join(" · ")}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {tech.areas.join(", ")}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">{Number(tech.rating).toFixed(1)}</p>
-                        <p className="text-xs text-muted-foreground">{tech.completed_jobs} jobs</p>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-5 text-xs text-muted-foreground">
-                Demo technician records for this early build.
-              </p>
-            </div>
+          </div>
+        </section>
+
+        {/* Technician showcase */}
+        <section className="section-y">
+          <div className="container-page">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Verified professionals</p>
+            <h2 className="mt-3 text-3xl sm:text-4xl">People who know how to fix things.</h2>
+            <p className="mt-3 max-w-xl text-muted-foreground">
+              Verified independent technicians available across Nigeria.
+            </p>
+            {technicians.length ? (
+              <div className="mt-10"><TechnicianGrid techs={technicians} /></div>
+            ) : null}
+            <Link
+              to="/technicians"
+              className="group mt-8 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              View all technicians
+              <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+            </Link>
           </div>
         </section>
 
         {/* How it works */}
-        <section id="how-it-works" className="section-y">
+        <section id="how-it-works" className="border-t border-border section-y">
           <div className="container-page">
             <h2 className="text-2xl sm:text-3xl">How FixRight works</h2>
             <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
