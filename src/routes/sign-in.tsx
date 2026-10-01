@@ -28,8 +28,8 @@ function SignInPage() {
   const target = redirect ?? "/dashboard";
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-5 py-14">
-      <Link to="/" className="text-lg font-semibold tracking-tight">
-        FixRight
+      <Link to="/" className="text-2xl" aria-label="FixRight home">
+        <Logo />
       </Link>
       <SignIn
         key={isDark ? "dark" : "light"}
