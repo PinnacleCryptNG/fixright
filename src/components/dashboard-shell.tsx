@@ -1,4 +1,5 @@
 import { Link, type LinkProps } from "@tanstack/react-router";
+import { clerkAppearance, ThemeToggle, useIsDark } from "@/components/theme";
 import { UserButton } from "@clerk/clerk-react";
 import { Wrench } from "lucide-react";
 import type { ReactNode } from "react";
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function DashboardShell({ area, navItems, children }: Props) {
+  const isDark = useIsDark();
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
@@ -30,7 +32,10 @@ export function DashboardShell({ area, navItems, children }: Props) {
               {area}
             </span>
           </Link>
-          <UserButton />
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <UserButton key={isDark ? "d" : "l"} appearance={clerkAppearance(isDark)} />
+          </div>
         </div>
       </header>
 
