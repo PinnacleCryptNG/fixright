@@ -226,3 +226,14 @@ insert into payment_attempts (reference, repair_request_id, amount_kobo)
   from repair_requests r left join services s on s.id = r.service_id
   where r.paystack_reference is not null
 on conflict (reference) do nothing;
+
+-- Admin: demo records are hidden from admin lists; verification emails are sent once per decision.
+alter table users add column if not exists is_demo boolean not null default false;
+update users set is_demo = true where email like '%@demo.fixright.ng' and not is_demo;
+create table if not exists verification_emails (
+  technician_id uuid not null references technician_profiles(id) on delete cascade,
+  status verification_status not null,
+  sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  primary key (technician_id, status)
+);

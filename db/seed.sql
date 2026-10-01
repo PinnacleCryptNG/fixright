@@ -77,3 +77,6 @@ from (values
 join users u on u.email = v.email
 join technician_profiles tp on tp.user_id = u.id
 on conflict do nothing;
+
+-- Demo technicians are marked so admin lists can hide them.
+update users set is_demo = true where email like '%@demo.fixright.ng' and not is_demo;
