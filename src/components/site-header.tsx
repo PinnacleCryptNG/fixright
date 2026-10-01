@@ -52,7 +52,7 @@ export function SiteHeader() {
         <Link
           to="/"
           onClick={close}
-          className="text-[1.375rem] font-bold tracking-[-0.03em] text-foreground"
+          className="text-[1.5rem] font-bold tracking-[-0.035em] text-foreground"
           aria-label="FixRight home"
         >
           Fix<span className="text-primary">Right</span>
