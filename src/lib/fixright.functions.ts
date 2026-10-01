@@ -144,6 +144,7 @@ export const adminListTechnicians = createServerFn({ method: "GET" }).handler(as
     left join technician_service_areas a on a.technician_id = tp.id
     left join technician_services ts on ts.technician_id = tp.id
     left join services s on s.id = ts.service_id
+    where not u.is_demo
     group by tp.id, u.full_name, u.email, u.phone
     order by u.full_name
   `) as Array<TechnicianCard & { email: string | null; phone: string | null }>;
@@ -158,10 +159,12 @@ export const adminListCustomers = createServerFn({ method: "GET" }).handler(asyn
 
   const sql = getSql();
   return (await sql`
-    select id, full_name, email, phone, created_at
-    from users where role = 'customer' order by created_at desc limit 100
+    select id, full_name, email, phone, created_at,
+           case when clerk_user_id is not null then 'active' else 'no_login' end as account_status
+    from users where role = 'customer' and not is_demo order by created_at desc limit 100
   `) as Array<{
     id: string;
+    account_status: "active" | "no_login";
     full_name: string | null;
     email: string | null;
     phone: string | null;
@@ -413,7 +416,7 @@ export const adminGetTechnician = createServerFn({ method: "POST" })
              coalesce((select bool_or(a.covers_entire_state) from technician_service_areas a where a.technician_id = tp.id), false) as entire_state,
              coalesce((select array_agg(s.name order by s.name) from technician_services ts join services s on s.id = ts.service_id where ts.technician_id = tp.id), '{}') as services
       from technician_profiles tp join users u on u.id = tp.user_id
-      where tp.id = ${data.id}
+      where tp.id = ${data.id} and not u.is_demo
     `) as Array<{
       id: string;
       full_name: string | null;
@@ -454,10 +457,21 @@ export const adminSetVerification = createServerFn({ method: "POST" })
     const { getSql } = await import("./db.server");
     await requireRole(await requireIdentity(), ["admin"]);
     const sql = getSql();
-    const rows = await sql`
-      update technician_profiles set verification_status = ${data.status}::verification_status, updated_at = now()
-      where id = ${data.id} returning id`;
+    // Capture the previous status atomically so the email is tied to a real change.
+    const rows = (await sql`
+      with prev as (
+        select tp.id, tp.verification_status as old_status from technician_profiles tp
+        join users u on u.id = tp.user_id
+        where tp.id = ${data.id} and not u.is_demo for update of tp
+      )
+      update technician_profiles t set verification_status = ${data.status}::verification_status, updated_at = now()
+      from prev where t.id = prev.id returning prev.old_status`) as Array<{ old_status: string }>;
     if (rows.length === 0) throw new Error("Technician not found.");
+    const oldStatus = rows[0]!.old_status;
+    if (oldStatus === "pending" && (data.status === "verified" || data.status === "rejected")) {
+      const { sendVerificationEmail } = await import("./verification-email.server");
+      await sendVerificationEmail(data.id, data.status);
+    }
     if (data.status !== "verified") {
       // Ineligible technicians lose any open offers immediately.
       await sql`update request_offers set status = 'withdrawn', responded_at = now()
