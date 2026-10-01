@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { PageHeader } from "@/components/page-header";
-import { NotBuiltYet } from "@/components/not-built-yet";
+import { Link } from "@tanstack/react-router";
 import { getAdminOverview } from "@/lib/fixright.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
@@ -57,11 +57,28 @@ function AdminOverviewPage() {
         ))}
       </div>
 
-      <div className="mt-8">
-        <NotBuiltYet
-          title="Operational controls"
-          description="Verification decisions, request reassignment and service editing arrive with the booking flow."
-        />
+      <div className="mt-8 rounded-lg border border-border bg-card p-5 shadow-card">
+        <h2 className="text-base font-semibold">What you can do here</h2>
+        <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+          <li>
+            <Link to="/admin/technicians" className="font-medium text-foreground hover:underline">
+              Technicians
+            </Link>{" "}
+            — review applications and approve, reject or suspend technicians. Approved and rejected technicians are emailed the decision.
+          </li>
+          <li>
+            <Link to="/admin/customers" className="font-medium text-foreground hover:underline">
+              Customers
+            </Link>{" "}
+            — see customer accounts with their email, phone and join date.
+          </li>
+          <li>
+            <Link to="/admin/services" className="font-medium text-foreground hover:underline">
+              Services
+            </Link>{" "}
+            — view the repair services and their service-call fees.
+          </li>
+        </ul>
       </div>
     </>
   );
