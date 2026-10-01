@@ -31,7 +31,7 @@ function SignUpPage() {
   const { role, redirect } = Route.useSearch();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-surface px-5 py-14">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-5 py-14">
       <Link to="/" className="text-lg font-semibold tracking-tight">
         FixRight
       </Link>

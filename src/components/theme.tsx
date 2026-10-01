@@ -102,3 +102,17 @@ export function AmbientBackground() {
     </div>
   );
 }
+
+/** Tracks the live `.dark` class on <html>, so any component re-renders when the theme changes. */
+export function useIsDark() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const root = document.documentElement;
+    const read = () => setDark(root.classList.contains("dark"));
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+}

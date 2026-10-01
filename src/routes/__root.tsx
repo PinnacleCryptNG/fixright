@@ -15,7 +15,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CLERK_PUBLISHABLE_KEY } from "../lib/config";
 import { Toaster } from "../components/ui/sonner";
-import { AmbientBackground, themeInitScript } from "../components/theme";
+import { dark as clerkDark } from "@clerk/themes";
+import { AmbientBackground, themeInitScript, useIsDark } from "../components/theme";
 
 function NotFoundComponent() {
   return (
@@ -125,9 +126,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isDark = useIsDark();
 
   return (
-    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
+    <ClerkProvider
+      publishableKey={CLERK_PUBLISHABLE_KEY}
+      afterSignOutUrl="/"
+      appearance={
+        isDark
+          ? { baseTheme: clerkDark, variables: { colorPrimary: "#4faf8d", colorBackground: "#17211d", colorText: "#f4f5f1", colorTextSecondary: "#a6aea9", colorInputBackground: "#101713", colorInputText: "#f4f5f1", fontFamily: "DM Sans, sans-serif" } }
+          : { variables: { colorPrimary: "#176b52", colorText: "#17211d", colorTextSecondary: "#737a75", fontFamily: "DM Sans, sans-serif" } }
+      }
+    >
       <QueryClientProvider client={queryClient}>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <AmbientBackground />
