@@ -15,7 +15,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CLERK_PUBLISHABLE_KEY } from "../lib/config";
 import { Toaster } from "../components/ui/sonner";
-import { AmbientBackground, themeInitScript } from "../components/theme";
+import { AmbientBackground, themeInitScript, useIsDark, clerkAppearance } from "../components/theme";
 
 function NotFoundComponent() {
   return (
@@ -125,9 +125,14 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isDark = useIsDark();
 
   return (
-    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
+    <ClerkProvider
+      publishableKey={CLERK_PUBLISHABLE_KEY}
+      afterSignOutUrl="/"
+      appearance={clerkAppearance(isDark)}
+    >
       <QueryClientProvider client={queryClient}>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <AmbientBackground />

@@ -102,3 +102,36 @@ export function AmbientBackground() {
     </div>
   );
 }
+
+/** Tracks the live `.dark` class on <html>, so any component re-renders when the theme changes. */
+export function useIsDark() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const root = document.documentElement;
+    const read = () => setDark(root.classList.contains("dark"));
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+}
+
+/** Clerk widget styling matched to the FixRight palette for the active theme. */
+export function clerkAppearance(isDark: boolean): { variables: Record<string, string> } {
+  return isDark
+    ? {
+        variables: {
+          colorPrimary: "#4faf8d",
+          colorBackground: "#17211d",
+          colorText: "#f4f5f1",
+          colorTextSecondary: "#a6aea9",
+          colorInputBackground: "#101713",
+          colorInputText: "#f4f5f1",
+          colorNeutral: "#f4f5f1",
+          colorShimmer: "rgba(255,255,255,0.06)",
+          fontFamily: "DM Sans, sans-serif",
+        },
+      }
+    : { variables: { colorPrimary: "#176b52", colorText: "#17211d", colorTextSecondary: "#737a75", fontFamily: "DM Sans, sans-serif" } };
+}
