@@ -149,7 +149,7 @@ function Landing() {
         {/* Hero */}
         <section className="border-b border-border">
           <div className="container-page grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
-            <div className="max-w-2xl">
+            <div className="min-w-0 max-w-2xl">
               <p className={eyebrow}>Repairs, without the runaround</p>
               <h1 className="mt-5 text-4xl leading-[1.05] tracking-[-0.03em] sm:text-5xl lg:text-[4rem]">
                 Something broken?
@@ -176,7 +176,7 @@ function Landing() {
                 </p>
               </div>
             </div>
-            <div className="rounded-2xl bg-surface p-4 sm:p-8">
+            <div className="min-w-0 rounded-2xl bg-surface p-4 sm:p-8">
               <HeroMatch techs={technicians} />
             </div>
           </div>
