@@ -79,7 +79,13 @@ export const getPublicTechnician = createServerFn({ method: "GET" })
 
 const syncSchema = z.object({
   fullName: z.string().max(120).nullable().optional(),
-  avatarUrl: z.string().max(500).nullable().optional(),
+  avatarUrl: z
+    .string()
+    .url()
+    .max(500)
+    .refine((u) => u.startsWith("https://"), "Invalid photo link")
+    .nullable()
+    .optional(),
   desiredRole: z.enum(["customer", "technician"]).optional(),
 });
 
@@ -204,7 +210,16 @@ const newRequestSchema = z
   .refine((d) => isValidLga(d.state, d.lga), { message: "Unknown local government area" })
   .refine((d) => d.date >= new Date(Date.now() + 3600_000).toISOString().slice(0, 10), {
     message: "Date must be today or later",
-  });
+  })
+  .refine((d) => new Date(`${d.date}T00:00:00Z`).toISOString().slice(0, 10) === d.date, {
+    message: "Choose a real date",
+  })
+  .refine(
+    (d) => d.date <= new Date(Date.now() + 3600_000 + 90 * 86400_000).toISOString().slice(0, 10),
+    {
+      message: "Choose a date within the next 90 days",
+    },
+  );
 
 async function requireCustomer() {
   const { requireIdentity } = await import("./clerk-auth.server");
@@ -216,6 +231,7 @@ export const submitRepairRequest = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => newRequestSchema.parse(d))
   .handler(async ({ data }) => {
     const user = await requireCustomer();
+    (await import("./rate-limit.server")).rateLimit(`req:${user.id}`, 10, 10 * 60_000);
     const m = await import("./booking.server");
     return m.createRepairRequest(user, data);
   });
@@ -234,6 +250,7 @@ export const initializeRepairPayment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => idSchema.parse(d))
   .handler(async ({ data }) => {
     const user = await requireCustomer();
+    (await import("./rate-limit.server")).rateLimit(`payinit:${user.id}`, 10, 10 * 60_000);
     const { getRequestUrl } = await import("@tanstack/react-start/server");
     const origin = getRequestUrl().origin;
     const m = await import("./booking.server");
@@ -242,10 +259,13 @@ export const initializeRepairPayment = createServerFn({ method: "POST" })
 
 export const verifyRepairPayment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ requestId: z.string().uuid(), reference: z.string().trim().min(8).max(80) }).parse(d),
+    z
+      .object({ requestId: z.string().uuid(), reference: z.string().trim().min(8).max(80) })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const user = await requireCustomer();
+    (await import("./rate-limit.server")).rateLimit(`payverify:${user.id}`, 30, 10 * 60_000);
     const m = await import("./booking.server");
     return m.verifyAndConfirmPayment(user, data.requestId, data.reference);
   });
@@ -283,27 +303,41 @@ export const getMyTechProfile = createServerFn({ method: "GET" }).handler(async 
 const profileSchema = z
   .object({
     fullName: z.string().trim().min(2).max(120),
-    phone: z.string().trim().regex(/^\+?[0-9 ]{10,16}$/, "Enter a valid phone number"),
-    avatarUrl: z.string().trim().url().max(500).nullable().optional(),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^\+?[0-9 ]{10,16}$/, "Enter a valid phone number"),
+    avatarUrl: z
+      .string()
+      .trim()
+      .url()
+      .max(500)
+      .refine((u) => u.startsWith("https://"), "Invalid photo link")
+      .nullable()
+      .optional(),
     bio: z.string().trim().max(600).nullable().optional(),
     yearsExperience: z.number().int().min(0).max(60),
     serviceIds: z.array(z.string().uuid()).min(1).max(20),
     state: z.string().refine((v) => NIGERIA_STATES.includes(v), "Choose a state"),
     entireState: z.boolean(),
-    lgas: z.array(z.string()).max(60),
+    lgas: z.array(z.string().max(80)).max(60),
     workStart: z.string().regex(timeRe),
     workEnd: z.string().regex(timeRe),
     available: z.boolean(),
   })
   .refine((d) => d.workEnd > d.workStart, { message: "Working hours must end after they start" })
-  .refine((d) => d.entireState || (d.lgas.length > 0 && d.lgas.every((l) => isValidLga(d.state, l))), {
-    message: "Choose at least one LGA in your state",
-  });
+  .refine(
+    (d) => d.entireState || (d.lgas.length > 0 && d.lgas.every((l) => isValidLga(d.state, l))),
+    {
+      message: "Choose at least one LGA in your state",
+    },
+  );
 
 export const saveMyTechProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => profileSchema.parse(d))
   .handler(async ({ data }) => {
     const user = await requireTechnician();
+    (await import("./rate-limit.server")).rateLimit(`profile:${user.id}`, 20, 10 * 60_000);
     const m = await import("./technician.server");
     return m.saveMyProfile(user, data);
   });
@@ -381,10 +415,24 @@ export const adminGetTechnician = createServerFn({ method: "POST" })
       from technician_profiles tp join users u on u.id = tp.user_id
       where tp.id = ${data.id}
     `) as Array<{
-      id: string; full_name: string | null; email: string | null; phone: string | null; avatar_url: string | null;
-      bio: string | null; years_experience: number; verification_status: import("./types").VerificationStatus;
-      available: boolean; rating: string; completed_jobs: number;
-      work_start: string; work_end: string; created_at: string; state: string | null; entire_state: boolean; lgas: string[]; services: string[];
+      id: string;
+      full_name: string | null;
+      email: string | null;
+      phone: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      years_experience: number;
+      verification_status: import("./types").VerificationStatus;
+      available: boolean;
+      rating: string;
+      completed_jobs: number;
+      work_start: string;
+      work_end: string;
+      created_at: string;
+      state: string | null;
+      entire_state: boolean;
+      lgas: string[];
+      services: string[];
     }>;
     if (!rows[0]) throw new Error("Technician not found.");
     return rows[0];
@@ -393,7 +441,12 @@ export const adminGetTechnician = createServerFn({ method: "POST" })
 /** Admin only: change a technician's verification status (persisted). */
 export const adminSetVerification = createServerFn({ method: "POST" })
   .inputValidator((d) =>
-    z.object({ id: z.string().uuid(), status: z.enum(["pending", "verified", "rejected", "suspended"]) }).parse(d),
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["pending", "verified", "rejected", "suspended"]),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { requireIdentity } = await import("./clerk-auth.server");

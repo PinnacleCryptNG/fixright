@@ -107,7 +107,8 @@ export async function listMyOffers(user: AppUser, requestId?: string): Promise<T
     where o.technician_id = ${id}
       and tp.available = true and tp.verification_status = 'verified'
       and ((o.status = 'offered' and r.status = 'matching')
-           or (${requestId ?? null}::uuid is not null and r.id = ${requestId ?? null}::uuid))
+           or (${requestId ?? null}::uuid is not null and r.id = ${requestId ?? null}::uuid
+               and o.status in ('offered', 'accepted')))
       and (${requestId ?? null}::uuid is null or r.id = ${requestId ?? null}::uuid)
     order by o.created_at desc
   `) as TechOffer[];
@@ -160,16 +161,21 @@ export async function advanceMyJob(user: AppUser, appointmentId: string) {
   const sql = getSql();
   const id = await getTechProfileId(user);
   const rows = (await sql`select status::text as status, repair_request_id from appointments
-                          where id = ${appointmentId} and technician_id = ${id}`) as Array<{ status: string; repair_request_id: string | null }>;
+                          where id = ${appointmentId} and technician_id = ${id}`) as Array<{
+    status: string;
+    repair_request_id: string | null;
+  }>;
   const job = rows[0];
   if (!job) throw new Error("Job not found.");
   const next = NEXT[job.status];
   if (!next) throw new Error("This job can't be updated further.");
-  const updated = (await sql`update appointments set status = ${next}::appointment_status, updated_at = now()
+  const updated =
+    (await sql`update appointments set status = ${next}::appointment_status, updated_at = now()
                              where id = ${appointmentId} and status::text = ${job.status} returning id`) as unknown[];
   if (!updated.length) throw new Error("This job was just updated. Refresh and try again.");
   if (job.repair_request_id) {
-    const reqStatus = next === "completed" ? "completed" : next === "in_progress" ? "in_progress" : null;
+    const reqStatus =
+      next === "completed" ? "completed" : next === "in_progress" ? "in_progress" : null;
     if (reqStatus) {
       await sql`update repair_requests set status = ${reqStatus}::repair_request_status, updated_at = now()
                 where id = ${job.repair_request_id}`;

@@ -211,3 +211,18 @@ alter type payment_status add value if not exists 'failed';
 alter table repair_requests add column if not exists paystack_reference text;
 alter table repair_requests add column if not exists paid_at timestamptz;
 create unique index if not exists uq_request_paystack_ref on repair_requests(paystack_reference) where paystack_reference is not null;
+
+-- Phase 6: every Paystack reference ever issued for a request, so a payment made
+-- on an older checkout (second tab / repeated Pay click) is still recognised.
+create table if not exists payment_attempts (
+  reference text primary key,
+  repair_request_id uuid not null references repair_requests(id) on delete cascade,
+  amount_kobo integer not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_payment_attempts_request on payment_attempts(repair_request_id);
+insert into payment_attempts (reference, repair_request_id, amount_kobo)
+  select r.paystack_reference, r.id, round(coalesce(s.base_service_fee, 1000) * 100)::int
+  from repair_requests r left join services s on s.id = r.service_id
+  where r.paystack_reference is not null
+on conflict (reference) do nothing;
