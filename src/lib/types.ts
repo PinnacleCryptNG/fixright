@@ -102,6 +102,7 @@ export type BookingView = {
   service_fee: string | null;
   appointment_id: string | null;
   payment_status: PaymentStatus | null;
+  payment_reference: string | null;
   technician: MatchedTechnician | null;
   alternatives: AlternativeSlot[];
   /** Offered to technicians, none has accepted yet. */

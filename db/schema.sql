@@ -204,3 +204,10 @@ update repair_requests set state = 'Kaduna',
 
 -- Homepage showcase label (display only, e.g. "Gwarinpa, Abuja"); matching uses technician_service_areas.
 alter table technician_profiles add column if not exists showcase_area text;
+
+-- Pass 4: real Paystack payments. Reference + paid timestamp live on the request;
+-- the appointment is only created after server-side verification.
+alter type payment_status add value if not exists 'failed';
+alter table repair_requests add column if not exists paystack_reference text;
+alter table repair_requests add column if not exists paid_at timestamptz;
+create unique index if not exists uq_request_paystack_ref on repair_requests(paystack_reference) where paystack_reference is not null;

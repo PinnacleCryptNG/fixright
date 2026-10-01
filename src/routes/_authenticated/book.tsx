@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type ReactNode } from "react";
 import { z } from "zod";
-import { ArrowLeft, BadgeCheck, CalendarDays, Check, CreditCard, MapPin, Star, Wrench } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarDays, Check, MapPin, Star, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,11 @@ import { LocationPicker, type PickedLocation } from "@/components/location-picke
 import { useAppUser } from "@/hooks/use-app-user";
 import {
   cancelRepairRequest,
-  confirmRepairBooking,
   getRepairRequest,
+  initializeRepairPayment,
   listServices,
   submitRepairRequest,
+  verifyRepairPayment,
 } from "@/lib/fixright.functions";
 import { formatNaira, formatSlot, formatTime, todayLocalISO } from "@/lib/format";
 import { SERVICE_FEE_NOTE } from "@/lib/config";
@@ -23,7 +24,7 @@ import type { AlternativeSlot, BookingView, ServiceRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/book")({
-  validateSearch: z.object({ request: z.string().uuid().optional() }),
+  validateSearch: z.object({ request: z.string().uuid().optional(), reference: z.string().optional() }),
   head: () => ({
     meta: [
       { title: "Book a repair — FixRight" },
@@ -70,7 +71,7 @@ const emptyDraft: Draft = {
 };
 
 const STEPS = ["Service", "Problem", "Location", "Availability", "Review"];
-type Phase = "form" | "matching" | "waiting" | "matched" | "payment" | "none" | "booked";
+type Phase = "form" | "matching" | "waiting" | "matched" | "payment" | "processing" | "none" | "booked";
 
 function BookPage() {
   const { role, isPending } = useAppUser();
@@ -81,20 +82,39 @@ function BookPage() {
   const [busy, setBusy] = useState(false);
 
   const submit = useServerFn(submitRepairRequest);
-  const confirm = useServerFn(confirmRepairBooking);
+  const initPay = useServerFn(initializeRepairPayment);
+  const verifyPay = useServerFn(verifyRepairPayment);
   const cancel = useServerFn(cancelRepairRequest);
 
   const getReq = useServerFn(getRepairRequest);
-  const { request: resumeId } = Route.useSearch();
+  const { request: resumeId, reference } = Route.useSearch();
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Resume a request from the dashboard, and poll while technicians decide.
   useEffect(() => {
     if (!resumeId || booking) return;
+    const apply = (b: BookingView) => {
+      setBooking(b);
+      setPhase(b.status === "confirmed" ? "booked" : phaseFor(b));
+    };
+    if (reference) {
+      // Returning from Paystack: always verify server-side before confirming.
+      setPhase("processing");
+      verifyPay({ data: { requestId: resumeId, reference } })
+        .then(apply)
+        .catch((e) => {
+          setPaymentError(e instanceof Error ? e.message : "We couldn't verify your payment.");
+          getReq({ data: { requestId: resumeId } })
+            .then((b) => {
+              setBooking(b);
+              setPhase("payment");
+            })
+            .catch(() => setPhase("form"));
+        });
+      return;
+    }
     getReq({ data: { requestId: resumeId } })
-      .then((b) => {
-        setBooking(b);
-        setPhase(b.status === "confirmed" ? "booked" : phaseFor(b));
-      })
+      .then(apply)
       .catch(() => undefined);
   }, [resumeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -160,16 +180,15 @@ function BookPage() {
     }
   }
 
-  async function handleConfirm() {
+  async function handlePay() {
     if (!booking) return;
     setBusy(true);
+    setPaymentError(null);
     try {
-      const result = await confirm({ data: { requestId: booking.id } });
-      setBooking(result);
-      setPhase("booked");
+      const { authorizationUrl } = await initPay({ data: { requestId: booking.id } });
+      window.location.href = authorizationUrl;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "We couldn't confirm this booking.");
-    } finally {
+      setPaymentError(e instanceof Error ? e.message : "We couldn't start the payment. Please try again.");
       setBusy(false);
     }
   }
@@ -215,10 +234,21 @@ function BookPage() {
       </Frame>
     );
   }
+  if (phase === "processing") {
+    return (
+      <Frame>
+        <div className="rise-in py-16 text-center">
+          <span className="mx-auto block h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <h1 className="mt-6 text-2xl">Confirming your payment…</h1>
+          <p className="mt-2 text-sm text-muted-foreground">This only takes a moment. Please don't close this page.</p>
+        </div>
+      </Frame>
+    );
+  }
   if (phase === "payment" && booking && booking.technician) {
     return (
       <Frame>
-        <PaymentView booking={booking} busy={busy} onPay={handleConfirm} onBack={() => setPhase("matched")} />
+        <PaymentView booking={booking} busy={busy} error={paymentError} onPay={handlePay} onBack={() => setPhase("matched")} />
       </Frame>
     );
   }
@@ -663,7 +693,8 @@ function BookedView({ booking }: { booking: BookingView }) {
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
         <Check className="h-6 w-6" />
       </span>
-      <h1 className="mt-5 text-4xl sm:text-5xl">You're booked.</h1>
+      <h1 className="mt-5 text-4xl sm:text-5xl">Payment confirmed.</h1>
+      <p className="mt-2 text-lg text-muted-foreground">Your repair visit is booked.</p>
       <dl className="mt-6 divide-y divide-border rounded-lg border border-border bg-card shadow-card">
         <ReviewRow label="Technician">{booking.technician?.full_name}</ReviewRow>
         <ReviewRow label="Repair">{booking.service_name} repair</ReviewRow>
@@ -674,9 +705,11 @@ function BookedView({ booking }: { booking: BookingView }) {
         <ReviewRow label="Service call">{formatNaira(booking.service_fee)}</ReviewRow>
         <ReviewRow label="Payment">
           <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium">
-            {booking.payment_status === "paid" ? "Paid · Demo" : "Not paid"}
+            {booking.payment_status === "paid" ? "Paid" : "Not paid"}
           </span>
-          <span className="mt-1 block text-xs text-muted-foreground">Demo payment — no real money was charged.</span>
+          {booking.payment_reference ? (
+            <span className="mt-1 block text-xs text-muted-foreground">Reference: {booking.payment_reference}</span>
+          ) : null}
         </ReviewRow>
       </dl>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -701,15 +734,12 @@ function FeeBox({ fee }: { fee: string | null }) {
   );
 }
 
-function PaymentView({ booking, busy, onPay, onBack }: { booking: BookingView; busy: boolean; onPay: () => void; onBack: () => void }) {
+function PaymentView({ booking, busy, error, onPay, onBack }: { booking: BookingView; busy: boolean; error: string | null; onPay: () => void; onBack: () => void }) {
   return (
     <div className="rise-in">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-primary/50 px-2.5 py-0.5 text-xs font-medium text-primary">
-        <CreditCard className="h-3.5 w-3.5" /> Demo payment
-      </span>
-      <h1 className="mt-4 text-3xl sm:text-4xl">Pay to confirm</h1>
+      <h1 className="text-3xl sm:text-4xl">Pay to confirm</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        This is a simulated payment for the demo. No card is needed and no real money is charged.
+        Your technician has accepted. Pay the {formatNaira(booking.service_fee)} service call to confirm the visit.
       </p>
       <dl className="mt-6 divide-y divide-border rounded-lg border border-border bg-card shadow-card">
         <ReviewRow label="Technician">{booking.technician?.full_name}</ReviewRow>
@@ -717,10 +747,18 @@ function PaymentView({ booking, busy, onPay, onBack }: { booking: BookingView; b
         <ReviewRow label="Amount"><span className="text-lg font-semibold">{formatNaira(booking.service_fee)}</span></ReviewRow>
       </dl>
       <p className="mt-3 text-xs text-muted-foreground">{SERVICE_FEE_NOTE}</p>
+      {error ? (
+        <p className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>
+      ) : null}
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <Button size="lg" disabled={busy} onClick={onPay}>{busy ? "Processing…" : `Pay ${formatNaira(booking.service_fee)}`}</Button>
+        <Button size="lg" disabled={busy} onClick={onPay}>
+          {busy ? "Opening secure checkout…" : `Pay ${formatNaira(booking.service_fee)} service call`}
+        </Button>
         <Button size="lg" variant="outline" disabled={busy} onClick={onBack}>Back</Button>
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        You'll be taken to Paystack's secure checkout to pay by card, bank transfer or USSD.
+      </p>
     </div>
   );
 }

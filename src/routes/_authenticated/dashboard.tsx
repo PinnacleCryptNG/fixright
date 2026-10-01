@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 const statusLabel: Record<string, string> = {
   submitted: "Submitted",
   matching: "Finding technician",
-  technician_pending: "Technician found",
+  technician_pending: "Technician accepted — payment required",
   on_the_way: "Technician on the way",
   arrived: "Technician arrived",
   confirmed: "Confirmed",
@@ -90,7 +90,7 @@ function CustomerDashboard() {
                   </div>
                   <p className="mt-3 text-xs text-muted-foreground">
                     Service call {formatNaira(a.service_fee)} ·{" "}
-                    {a.payment_status === "paid" ? "Paid · Demo" : "Not paid"}
+                    {a.payment_status === "paid" ? "Paid" : "Not paid"}
                   </p>
                 </div>
               ))}
@@ -118,7 +118,7 @@ function CustomerDashboard() {
                     </div>
                   ) : r.status === "technician_pending" ? (
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
-                      <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs text-accent-foreground">Technician found</span>
+                      <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs text-accent-foreground">Technician accepted — payment required</span>
                       <Link to="/book" search={{ request: r.id }} className="text-xs font-medium text-primary hover:underline">Confirm &amp; pay</Link>
                     </div>
                   ) : r.status === "matching" && !r.has_technician ? (

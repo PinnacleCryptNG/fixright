@@ -230,12 +230,24 @@ export const getRepairRequest = createServerFn({ method: "POST" })
     return m.getBooking(user, data.requestId);
   });
 
-export const confirmRepairBooking = createServerFn({ method: "POST" })
+export const initializeRepairPayment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => idSchema.parse(d))
   .handler(async ({ data }) => {
     const user = await requireCustomer();
+    const { getRequestUrl } = await import("@tanstack/react-start/server");
+    const origin = getRequestUrl().origin;
     const m = await import("./booking.server");
-    return m.confirmBooking(user, data.requestId);
+    return m.initializePayment(user, data.requestId, `${origin}/book?request=${data.requestId}`);
+  });
+
+export const verifyRepairPayment = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ requestId: z.string().uuid(), reference: z.string().trim().min(8).max(80) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const user = await requireCustomer();
+    const m = await import("./booking.server");
+    return m.verifyAndConfirmPayment(user, data.requestId, data.reference);
   });
 
 export const cancelRepairRequest = createServerFn({ method: "POST" })

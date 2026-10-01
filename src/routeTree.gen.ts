@@ -34,6 +34,7 @@ import { Route as AuthenticatedTechnicianIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedTechnicianDashboardRouteImport } from './routes/_authenticated/technician.dashboard'
 import { Route as AuthenticatedTechnicianJobsRouteImport } from './routes/_authenticated/technician.jobs'
 import { Route as AuthenticatedTechnicianProfileRouteImport } from './routes/_authenticated/technician.profile'
+import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api/public/paystack-webhook'
 import { Route as AuthenticatedTechnicianRequestsIndexRouteImport } from './routes/_authenticated/technician.requests.index'
 import { Route as AuthenticatedTechnicianRequestsRequestIdRouteImport } from './routes/_authenticated/technician.requests.$requestId'
 
@@ -170,6 +171,12 @@ const AuthenticatedTechnicianProfileRoute =
     path: '/profile',
     getParentRoute: () => AuthenticatedTechnicianRoute,
   } as any)
+const ApiPublicPaystackWebhookRoute =
+  ApiPublicPaystackWebhookRouteImport.update({
+    id: '/api/public/paystack-webhook',
+    path: '/api/public/paystack-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedTechnicianRequestsIndexRoute =
   AuthenticatedTechnicianRequestsIndexRouteImport.update({
     id: '/requests/',
@@ -206,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
   '/technician/jobs': typeof AuthenticatedTechnicianJobsRoute
   '/technician/profile': typeof AuthenticatedTechnicianProfileRoute
+  '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/technician/': typeof AuthenticatedTechnicianIndexRoute
   '/technician/requests/$requestId': typeof AuthenticatedTechnicianRequestsRequestIdRoute
@@ -232,6 +240,7 @@ export interface FileRoutesByTo {
   '/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
   '/technician/jobs': typeof AuthenticatedTechnicianJobsRoute
   '/technician/profile': typeof AuthenticatedTechnicianProfileRoute
+  '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/technician': typeof AuthenticatedTechnicianIndexRoute
   '/technician/requests/$requestId': typeof AuthenticatedTechnicianRequestsRequestIdRoute
@@ -262,6 +271,7 @@ export interface FileRoutesById {
   '/_authenticated/technician/dashboard': typeof AuthenticatedTechnicianDashboardRoute
   '/_authenticated/technician/jobs': typeof AuthenticatedTechnicianJobsRoute
   '/_authenticated/technician/profile': typeof AuthenticatedTechnicianProfileRoute
+  '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/technician/': typeof AuthenticatedTechnicianIndexRoute
   '/_authenticated/technician/requests/$requestId': typeof AuthenticatedTechnicianRequestsRequestIdRoute
@@ -292,6 +302,7 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/jobs'
     | '/technician/profile'
+    | '/api/public/paystack-webhook'
     | '/admin/'
     | '/technician/'
     | '/technician/requests/$requestId'
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/technician/dashboard'
     | '/technician/jobs'
     | '/technician/profile'
+    | '/api/public/paystack-webhook'
     | '/admin'
     | '/technician'
     | '/technician/requests/$requestId'
@@ -347,6 +359,7 @@ export interface FileRouteTypes {
     | '/_authenticated/technician/dashboard'
     | '/_authenticated/technician/jobs'
     | '/_authenticated/technician/profile'
+    | '/api/public/paystack-webhook'
     | '/_authenticated/admin/'
     | '/_authenticated/technician/'
     | '/_authenticated/technician/requests/$requestId'
@@ -365,6 +378,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   TechniciansTechIdRoute: typeof TechniciansTechIdRoute
   TechniciansIndexRoute: typeof TechniciansIndexRoute
+  ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -544,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTechnicianProfileRouteImport
       parentRoute: typeof AuthenticatedTechnicianRoute
     }
+    '/api/public/paystack-webhook': {
+      id: '/api/public/paystack-webhook'
+      path: '/api/public/paystack-webhook'
+      fullPath: '/api/public/paystack-webhook'
+      preLoaderRoute: typeof ApiPublicPaystackWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/technician/requests/': {
       id: '/_authenticated/technician/requests/'
       path: '/requests'
@@ -638,6 +659,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   TechniciansTechIdRoute: TechniciansTechIdRoute,
   TechniciansIndexRoute: TechniciansIndexRoute,
+  ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
