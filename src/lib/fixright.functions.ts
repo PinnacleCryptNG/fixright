@@ -79,7 +79,7 @@ export const getPublicTechnician = createServerFn({ method: "GET" })
 
 const syncSchema = z.object({
   fullName: z.string().max(120).nullable().optional(),
-  avatarUrl: z.string().max(500).nullable().optional(),
+  avatarUrl: z.string().url().max(500).refine((u) => u.startsWith("https://"), "Invalid photo link").nullable().optional(),
   desiredRole: z.enum(["customer", "technician"]).optional(),
 });
 
@@ -204,6 +204,12 @@ const newRequestSchema = z
   .refine((d) => isValidLga(d.state, d.lga), { message: "Unknown local government area" })
   .refine((d) => d.date >= new Date(Date.now() + 3600_000).toISOString().slice(0, 10), {
     message: "Date must be today or later",
+  })
+  .refine((d) => new Date(`${d.date}T00:00:00Z`).toISOString().slice(0, 10) === d.date, {
+    message: "Choose a real date",
+  })
+  .refine((d) => d.date <= new Date(Date.now() + 3600_000 + 90 * 86400_000).toISOString().slice(0, 10), {
+    message: "Choose a date within the next 90 days",
   });
 
 async function requireCustomer() {
@@ -216,6 +222,7 @@ export const submitRepairRequest = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => newRequestSchema.parse(d))
   .handler(async ({ data }) => {
     const user = await requireCustomer();
+    (await import("./rate-limit.server")).rateLimit(`req:${user.id}`, 10, 10 * 60_000);
     const m = await import("./booking.server");
     return m.createRepairRequest(user, data);
   });
@@ -234,6 +241,7 @@ export const initializeRepairPayment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => idSchema.parse(d))
   .handler(async ({ data }) => {
     const user = await requireCustomer();
+    (await import("./rate-limit.server")).rateLimit(`payinit:${user.id}`, 10, 10 * 60_000);
     const { getRequestUrl } = await import("@tanstack/react-start/server");
     const origin = getRequestUrl().origin;
     const m = await import("./booking.server");
@@ -246,6 +254,7 @@ export const verifyRepairPayment = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const user = await requireCustomer();
+    (await import("./rate-limit.server")).rateLimit(`payverify:${user.id}`, 30, 10 * 60_000);
     const m = await import("./booking.server");
     return m.verifyAndConfirmPayment(user, data.requestId, data.reference);
   });
@@ -284,13 +293,13 @@ const profileSchema = z
   .object({
     fullName: z.string().trim().min(2).max(120),
     phone: z.string().trim().regex(/^\+?[0-9 ]{10,16}$/, "Enter a valid phone number"),
-    avatarUrl: z.string().trim().url().max(500).nullable().optional(),
+    avatarUrl: z.string().trim().url().max(500).refine((u) => u.startsWith("https://"), "Invalid photo link").nullable().optional(),
     bio: z.string().trim().max(600).nullable().optional(),
     yearsExperience: z.number().int().min(0).max(60),
     serviceIds: z.array(z.string().uuid()).min(1).max(20),
     state: z.string().refine((v) => NIGERIA_STATES.includes(v), "Choose a state"),
     entireState: z.boolean(),
-    lgas: z.array(z.string()).max(60),
+    lgas: z.array(z.string().max(80)).max(60),
     workStart: z.string().regex(timeRe),
     workEnd: z.string().regex(timeRe),
     available: z.boolean(),
@@ -304,6 +313,7 @@ export const saveMyTechProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => profileSchema.parse(d))
   .handler(async ({ data }) => {
     const user = await requireTechnician();
+    (await import("./rate-limit.server")).rateLimit(`profile:${user.id}`, 20, 10 * 60_000);
     const m = await import("./technician.server");
     return m.saveMyProfile(user, data);
   });
