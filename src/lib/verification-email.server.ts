@@ -60,6 +60,8 @@ export async function sendVerificationEmail(technicianId: string, decision: Deci
     const resendKey = process.env["RESEND_API_KEY"];
     if (!lovableKey || !resendKey) {
       console.error("[verification-email] email provider not configured");
+      await sql`delete from verification_emails where technician_id = ${technicianId}
+                and status = ${decision}::verification_status and sent_at is null`;
       return;
     }
     const from = process.env["FIXRIGHT_EMAIL_FROM"] ?? "FixRight <noreply@fixright.online>";
@@ -79,6 +81,9 @@ export async function sendVerificationEmail(technicianId: string, decision: Deci
     });
     if (!res.ok) {
       console.error(`[verification-email] send failed [${res.status}]: ${await res.text()}`);
+      // Release the claim so a later decision can retry the send.
+      await sql`delete from verification_emails where technician_id = ${technicianId}
+                and status = ${decision}::verification_status and sent_at is null`;
       return;
     }
     await sql`update verification_emails set sent_at = now()

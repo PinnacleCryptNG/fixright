@@ -468,7 +468,9 @@ export const adminSetVerification = createServerFn({ method: "POST" })
       from prev where t.id = prev.id returning prev.old_status`) as Array<{ old_status: string }>;
     if (rows.length === 0) throw new Error("Technician not found.");
     const oldStatus = rows[0]!.old_status;
-    if (oldStatus === "pending" && (data.status === "verified" || data.status === "rejected")) {
+    // Email on any real change into verified/rejected (verification_emails dedupes).
+    // sendVerificationEmail never throws, so the saved decision always stands.
+    if (oldStatus !== data.status && (data.status === "verified" || data.status === "rejected")) {
       const { sendVerificationEmail } = await import("./verification-email.server");
       await sendVerificationEmail(data.id, data.status);
     }
