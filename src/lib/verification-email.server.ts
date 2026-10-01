@@ -60,6 +60,8 @@ export async function sendVerificationEmail(technicianId: string, decision: Deci
     const resendKey = process.env["RESEND_API_KEY"];
     if (!lovableKey || !resendKey) {
       console.error("[verification-email] email provider not configured");
+      await sql`delete from verification_emails where technician_id = ${technicianId}
+                and status = ${decision}::verification_status and sent_at is null`;
       return;
     }
     const from = process.env["FIXRIGHT_EMAIL_FROM"] ?? "FixRight <noreply@fixright.online>";
