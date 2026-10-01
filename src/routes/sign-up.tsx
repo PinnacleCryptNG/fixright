@@ -3,6 +3,7 @@ import { SignUp } from "@clerk/clerk-react";
 import { z } from "zod";
 
 import { clerkAppearance, useIsDark } from "@/components/theme";
+import { Logo } from "@/components/logo";
 
 const searchSchema = z.object({
   role: z.enum(["customer", "technician"]).catch("customer"),
