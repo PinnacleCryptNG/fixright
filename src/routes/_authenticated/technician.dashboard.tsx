@@ -70,7 +70,7 @@ function TechnicianDashboard() {
           <div className="grid gap-4">{offers.data.slice(0, 3).map((o) => <OfferCard key={o.id} offer={o} />)}</div>
         ) : (
           <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-            No new requests right now. New requests in your areas appear here automatically.
+            No new repair requests. Requests that match your services, areas and hours will appear here as they come in.
           </div>
         )}
       </section>

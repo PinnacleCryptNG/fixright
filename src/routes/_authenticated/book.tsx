@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type ReactNode } from "react";
 import { z } from "zod";
-import { ArrowLeft, BadgeCheck, CalendarDays, Check, MapPin, Star, Wrench } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarDays, Check, MapPin, Star } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -218,10 +219,18 @@ function BookPage() {
     return (
       <Frame>
         <Matching
-          title="Waiting for a technician to accept…"
-          text={`We've sent your ${booking.service_name ?? "repair"} request to available verified technicians in ${booking.area_name}. This page updates as soon as one accepts. You won't pay anything until then.`}
+          title="Waiting for a technician to accept"
+          text="Your request is being matched with a technician who covers your area. This page updates on its own when one accepts. You won't pay anything until then."
         />
-        <div className="mt-2 flex justify-center">
+        <dl className="divide-y divide-border rounded-lg border border-border bg-card">
+          <ReviewRow label="Service">{booking.service_name}</ReviewRow>
+          <ReviewRow label="Area">{booking.area_name}</ReviewRow>
+          <ReviewRow label="Date">{formatSlot(booking.requested_date, null, null)}</ReviewRow>
+          <ReviewRow label="Your window">
+            {formatTime(booking.availability_start ?? "")} – {formatTime(booking.availability_end ?? "")}
+          </ReviewRow>
+        </dl>
+        <div className="mt-6 flex justify-center">
           <Button variant="outline" onClick={() => handleChange()}>Change Request</Button>
         </div>
       </Frame>
@@ -230,7 +239,7 @@ function BookPage() {
   if (phase === "matched" && booking) {
     return (
       <Frame>
-        <MatchedView booking={booking} busy={busy} onConfirm={() => setPhase("payment")} onChange={() => handleChange()} />
+        <MatchedView booking={booking} busy={busy} error={paymentError} onConfirm={handlePay} onChange={() => handleChange()} />
       </Frame>
     );
   }
@@ -299,11 +308,8 @@ function Frame({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex h-14 max-w-xl items-center justify-between px-5">
-          <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Wrench className="h-3.5 w-3.5" />
-            </span>
-            FixRight
+          <Link to="/" className="text-xl" aria-label="FixRight home">
+            <Logo />
           </Link>
           <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
             My dashboard
@@ -334,14 +340,14 @@ function Progress({ step, onJump }: { step: number; onJump: (i: number) => void 
           />
         ))}
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
         Step {step + 1} of {STEPS.length} · {STEPS[step]}
       </p>
     </div>
   );
 }
 
-function Field({ label, error, optional, children }: { label: string; error?: string | undefined; optional?: boolean; children: ReactNode }) {
+function Field({ label, error, optional, hint, children }: { label: string; error?: string | undefined; optional?: boolean; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="text-sm font-medium">
@@ -349,7 +355,8 @@ function Field({ label, error, optional, children }: { label: string; error?: st
         {optional ? <span className="ml-1 font-normal text-muted-foreground">(optional)</span> : null}
       </span>
       <div className="mt-1.5">{children}</div>
-      {error ? <span className="mt-1 block text-xs text-destructive">{error}</span> : null}
+      {hint && !error ? <span className="mt-1 block text-xs text-muted-foreground">{hint}</span> : null}
+      {error ? <span role="alert" className="mt-1 block text-xs text-destructive">{error}</span> : null}
     </label>
   );
 }
@@ -367,7 +374,7 @@ function StepService({ selected, onSelect }: { selected: ServiceRecord | null; o
     <div>
       <h1 className="text-3xl sm:text-4xl">What needs fixing?</h1>
       <p className="mt-2 text-sm text-muted-foreground">Pick the item that needs a technician.</p>
-      {error ? <p className="mt-6 text-sm text-destructive">We couldn't load services. Please refresh.</p> : null}
+      {error ? <p role="alert" className="mt-6 text-sm text-destructive">We couldn't load the list of repairs. Check your connection and refresh the page.</p> : null}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {isLoading
           ? Array.from({ length: 8 }).map((_, i) => (
@@ -398,7 +405,7 @@ function StepProblem({ draft, update, onNext }: { draft: Draft; update: (p: Part
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (draft.problem.trim().length < 10) return setError("Please describe the problem in at least 10 characters.");
+        if (draft.problem.trim().length < 10) return setError("Tell us a little more about what's wrong — a sentence is enough.");
         setError(undefined);
         onNext();
       }}
@@ -406,13 +413,13 @@ function StepProblem({ draft, update, onNext }: { draft: Draft; update: (p: Part
     >
       <SelectedService service={draft.service} />
       <h1 className="text-3xl sm:text-4xl">Tell us what's wrong</h1>
-      <Field label="Describe the problem" error={error}>
+      <Field label="What's happening?" error={error} hint="This helps the technician bring the right tools.">
         <textarea
           rows={6}
           maxLength={2000}
           aria-invalid={Boolean(error)}
           value={draft.problem}
-          onChange={(e) => update({ problem: e.target.value })}
+          onChange={(e) => { update({ problem: e.target.value }); if (error && e.target.value.trim().length >= 10) setError(undefined); }}
           placeholder="Tell us what's happening. For example: My AC turns on but isn't cooling."
           className={cn(inputCls, "resize-y leading-relaxed")}
         />
@@ -436,7 +443,7 @@ function StepLocation({ draft, update, onNext }: { draft: Draft; update: (p: Par
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!draft.loc) { setError("Please confirm your location to continue."); return; }
+        if (!draft.loc) { setError("Confirm your location on the map to continue."); return; }
         onNext();
       }}
       className="space-y-5"
@@ -444,7 +451,7 @@ function StepLocation({ draft, update, onNext }: { draft: Draft; update: (p: Par
       <SelectedService service={draft.service} />
       <h1 className="text-3xl sm:text-4xl">Where should the technician come?</h1>
       <LocationPicker value={draft.loc} onConfirm={(loc) => { update({ loc }); setError(null); }} />
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
       <Field label="Flat, floor or landmark" optional>
         <input
           className={inputCls}
@@ -469,11 +476,11 @@ function StepAvailability({ draft, update, onNext }: { draft: Draft; update: (p:
       onSubmit={(e) => {
         e.preventDefault();
         const next: typeof errors = {};
-        if (!draft.date || draft.date < today) next.date = "Please choose today or a future date.";
-        if (!draft.windowStart || !draft.windowEnd) next.window = "Please choose when you're available.";
-        else if (draft.windowEnd <= draft.windowStart) next.window = "The end time must be after the start time.";
+        if (!draft.date || draft.date < today) next.date = "Choose a date — today or later.";
+        if (!draft.windowStart || !draft.windowEnd) next.window = "Choose when you're available.";
+        else if (draft.windowEnd <= draft.windowStart) next.window = "The end time needs to be after the start time.";
         else if (draft.custom && timeDiff(draft.windowStart, draft.windowEnd) < 60)
-          next.window = "Please allow at least one hour.";
+          next.window = "Leave at least one hour so a visit can fit.";
         setErrors(next);
         if (!next.date && !next.window) onNext();
       }}
@@ -483,7 +490,7 @@ function StepAvailability({ draft, update, onNext }: { draft: Draft; update: (p:
       <p className="rounded-md border border-border bg-primary-soft p-3 text-sm text-accent-foreground">
         You choose when you're available. We'll find an exact appointment time that works for you and the technician.
       </p>
-      <Field label="Date" error={errors.date}>
+      <Field label="Which day?" error={errors.date}>
         <input
           type="date"
           min={today}
@@ -494,7 +501,8 @@ function StepAvailability({ draft, update, onNext }: { draft: Draft; update: (p:
         />
       </Field>
       <fieldset>
-        <legend className="text-sm font-medium">Availability window</legend>
+        <legend className="text-sm font-medium">What time suits you?</legend>
+        <p className="mt-0.5 text-xs text-muted-foreground">The technician's visit will start inside this window.</p>
         <div className="mt-1.5 grid gap-2">
           {WINDOWS.map((w) => {
             const active = !draft.custom && draft.windowStart === w.start && draft.windowEnd === w.end;
@@ -502,6 +510,7 @@ function StepAvailability({ draft, update, onNext }: { draft: Draft; update: (p:
               <button
                 key={w.start}
                 type="button"
+                aria-pressed={active}
                 onClick={() => update({ windowStart: w.start, windowEnd: w.end, custom: false })}
                 className={cn(
                   "flex items-center justify-between rounded-md border bg-card px-4 py-3 text-sm transition",
@@ -515,6 +524,7 @@ function StepAvailability({ draft, update, onNext }: { draft: Draft; update: (p:
           })}
           <button
             type="button"
+            aria-pressed={draft.custom}
             onClick={() => update({ custom: true, windowStart: "", windowEnd: "" })}
             className={cn(
               "rounded-md border bg-card px-4 py-3 text-left text-sm transition",
@@ -534,7 +544,7 @@ function StepAvailability({ draft, update, onNext }: { draft: Draft; update: (p:
             </div>
           ) : null}
         </div>
-        {errors.window ? <p className="mt-1 text-xs text-destructive">{errors.window}</p> : null}
+        {errors.window ? <p role="alert" className="mt-1 text-xs text-destructive">{errors.window}</p> : null}
       </fieldset>
       <Button type="submit" size="lg" className="w-full">Review request</Button>
     </form>
@@ -573,8 +583,11 @@ function StepReview({ draft, onEdit, onSubmit, busy }: { draft: Draft; onEdit: (
         The {formatNaira(fee)} service-call fee covers the technician's visit and diagnosis. Repair labor and
         replacement parts are separate and will be discussed after inspection.
       </p>
-      <Button size="lg" className="mt-6 w-full" disabled={busy} onClick={onSubmit}>
-        Find a Technician
+      <p className="mt-4 text-sm text-muted-foreground">
+        Next, we'll send your request to verified technicians who cover your area. You only pay once one accepts.
+      </p>
+      <Button size="lg" className="mt-4 w-full" disabled={busy} aria-busy={busy} onClick={onSubmit}>
+        {busy ? "Finding a technician…" : "Find a Technician"}
       </Button>
     </div>
   );
@@ -613,14 +626,14 @@ function phaseFor(b: BookingView): Phase {
 }
 
 function Matching({
-  title = "Finding a technician near you…",
-  text = "Checking verified technicians, their areas and schedules.",
+  title = "Finding a technician…",
+  text = "Checking verified technicians who cover your area and are free in your window.",
 }: { title?: string; text?: string }) {
   return (
-    <div className="flex flex-col items-center py-16 text-center">
+    <div role="status" aria-live="polite" className="flex flex-col items-center py-16 text-center">
       <div className="relative flex h-24 w-24 items-center justify-center">
-        <span className="absolute inset-0 animate-ping rounded-full bg-primary/15 [animation-duration:1.8s]" />
-        <span className="absolute inset-3 animate-ping rounded-full bg-primary/20 [animation-delay:0.4s] [animation-duration:1.8s]" />
+        <span className="absolute inset-0 animate-ping motion-reduce:animate-none rounded-full bg-primary/15 [animation-duration:1.8s]" />
+        <span className="absolute inset-3 animate-ping motion-reduce:animate-none rounded-full bg-primary/20 [animation-delay:0.4s] [animation-duration:1.8s]" />
         <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <MapPin className="h-6 w-6" />
         </span>
@@ -665,10 +678,16 @@ function TechnicianCardView({ booking }: { booking: BookingView }) {
   );
 }
 
-function MatchedView({ booking, busy, onConfirm, onChange }: { booking: BookingView; busy: boolean; onConfirm: () => void; onChange: () => void }) {
+function MatchedView({ booking, busy, error, onConfirm, onChange }: { booking: BookingView; busy: boolean; error: string | null; onConfirm: () => void; onChange: () => void }) {
   return (
     <div className="rise-in">
-      <h1 className="text-3xl sm:text-4xl">We found a technician for you</h1>
+      <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-medium text-accent-foreground">
+        <Check className="h-3.5 w-3.5" /> Technician accepted — payment required
+      </p>
+      <h1 className="mt-4 text-3xl sm:text-4xl">Technician accepted</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Pay the {formatNaira(booking.service_fee)} service call fee to confirm your repair visit.
+      </p>
       <div className="mt-6"><TechnicianCardView booking={booking} /></div>
       <div className="mt-4 rounded-lg border border-border bg-card p-5">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Proposed appointment</p>
@@ -679,8 +698,13 @@ function MatchedView({ booking, busy, onConfirm, onChange }: { booking: BookingV
         <p className="mt-2 text-sm text-muted-foreground">This time fits within your requested availability window.</p>
       </div>
       <FeeBox fee={booking.service_fee} />
+      {error ? (
+        <p role="alert" className="mt-4 rounded-lg border border-border bg-muted p-3 text-sm">{error}</p>
+      ) : null}
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <Button size="lg" disabled={busy} onClick={onConfirm}>Confirm &amp; Pay {formatNaira(booking.service_fee)}</Button>
+        <Button size="lg" disabled={busy} aria-busy={busy} onClick={onConfirm}>
+          {busy ? "Opening secure checkout…" : `Pay ${formatNaira(booking.service_fee)} service call`}
+        </Button>
         <Button size="lg" variant="outline" disabled={busy} onClick={onChange}>Change Request</Button>
       </div>
     </div>
@@ -693,7 +717,7 @@ function BookedView({ booking }: { booking: BookingView }) {
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
         <Check className="h-6 w-6" />
       </span>
-      <h1 className="mt-5 text-4xl sm:text-5xl">Payment confirmed.</h1>
+      <h1 className="mt-5 text-4xl sm:text-5xl" role="status">Payment confirmed.</h1>
       <p className="mt-2 text-lg text-muted-foreground">Your repair visit is booked.</p>
       <dl className="mt-6 divide-y divide-border rounded-lg border border-border bg-card shadow-card">
         <ReviewRow label="Technician">{booking.technician?.full_name}</ReviewRow>
@@ -713,8 +737,8 @@ function BookedView({ booking }: { booking: BookingView }) {
         </ReviewRow>
       </dl>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <Button asChild size="lg"><Link to="/dashboard">View Appointment</Link></Button>
-        <Button asChild size="lg" variant="outline"><Link to="/dashboard">Back to dashboard</Link></Button>
+        <Button asChild size="lg"><Link to="/dashboard">View appointment</Link></Button>
+        <Button asChild size="lg" variant="outline"><a href="/book">Book another repair</a></Button>
       </div>
     </div>
   );
@@ -737,9 +761,11 @@ function FeeBox({ fee }: { fee: string | null }) {
 function PaymentView({ booking, busy, error, onPay, onBack }: { booking: BookingView; busy: boolean; error: string | null; onPay: () => void; onBack: () => void }) {
   return (
     <div className="rise-in">
-      <h1 className="text-3xl sm:text-4xl">Pay to confirm</h1>
+      <h1 className="text-3xl sm:text-4xl">{error ? "Payment wasn't completed" : "Pay to confirm"}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Your technician has accepted. Pay the {formatNaira(booking.service_fee)} service call to confirm the visit.
+        {error
+          ? `Your appointment is not confirmed yet, and no visit has been booked. Your technician's time is still held — you can try again.`
+          : `Your technician has accepted. Pay the ${formatNaira(booking.service_fee)} service call to confirm the visit.`}
       </p>
       <dl className="mt-6 divide-y divide-border rounded-lg border border-border bg-card shadow-card">
         <ReviewRow label="Technician">{booking.technician?.full_name}</ReviewRow>
@@ -748,11 +774,11 @@ function PaymentView({ booking, busy, error, onPay, onBack }: { booking: Booking
       </dl>
       <p className="mt-3 text-xs text-muted-foreground">{SERVICE_FEE_NOTE}</p>
       {error ? (
-        <p className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>
+        <p role="alert" className="mt-4 rounded-lg border border-border bg-muted p-3 text-sm">{error}</p>
       ) : null}
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <Button size="lg" disabled={busy} onClick={onPay}>
-          {busy ? "Opening secure checkout…" : `Pay ${formatNaira(booking.service_fee)} service call`}
+          {busy ? "Opening secure checkout…" : error ? `Try again — pay ${formatNaira(booking.service_fee)}` : `Pay ${formatNaira(booking.service_fee)} service call`}
         </Button>
         <Button size="lg" variant="outline" disabled={busy} onClick={onBack}>Back</Button>
       </div>
@@ -775,7 +801,7 @@ function NoMatchView({
     <div className="rise-in">
       <h1 className="text-2xl sm:text-3xl">We couldn't find a technician yet</h1>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        There isn't an available technician covering your area for this service and time right now. You have not been charged.
+        No verified technician covering {booking.area_name} is free for this repair at that time. You haven't been charged. Pick one of the times below, or change your request.
       </p>
       <dl className="mt-6 divide-y divide-border rounded-lg border border-border bg-card">
         <ReviewRow label="Service">{booking.service_name}</ReviewRow>
